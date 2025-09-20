@@ -1,8 +1,8 @@
+// API service for Football Picks app
 import axios from 'axios';
 
-// Since we're running on different ports, we need to use the full URL to the PHP backend
-// Assuming the PHP app runs on the same host but different port or path
-const BASE_URL = 'http://localhost'; // Adjust this to match your PHP server
+// Use the existing API endpoint
+const BASE_URL = 'https://jasetheace.com/footballpicks';
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -25,14 +25,29 @@ const transformRequest = (data) => {
 };
 
 export const authAPI = {
-  login: (email, password) => 
-    api.post('/footballpicks/', transformRequest({ Email: email, Pass: password })),
+  // Try the API endpoint first, fallback to main login
+  login: async (email, password) => {
+    try {
+      // First try the API endpoint
+      const response = await api.post('/api/login.php', transformRequest({ 
+        Email: email, 
+        Pass: password 
+      }));
+      return response;
+    } catch (error) {
+      // Fallback to main login page
+      return api.post('/', transformRequest({ 
+        Email: email, 
+        Pass: password 
+      }));
+    }
+  },
   
   logout: () => 
-    api.get('/footballpicks/logout.php'),
+    api.get('/logout.php'),
   
   createAccount: (userData) => 
-    api.post('/footballpicks/createaccount.php', transformRequest({
+    api.post('/createaccount.php', transformRequest({
       email: userData.email,
       name: userData.realName,
       nick: userData.nickName,
@@ -42,25 +57,32 @@ export const authAPI = {
       SUBMIT: 'Sign Up'
     })),
   
-  checkSession: () => 
-    api.get('/footballpicks/api/session-check.php')
+  checkSession: async () => {
+    try {
+      // Try API endpoint first
+      return await api.get('/api/check-session.php');
+    } catch (error) {
+      // Fallback to session check
+      return api.get('/api/session-check.php');
+    }
+  }
 };
 
 export const gameAPI = {
   getWeeks: () => 
-    api.get('/footballpicks/api/weeks.php'),
+    api.get('/api/weeks.php'),
   
   getCurrentWeek: () => 
-    api.get('/footballpicks/api/current-week.php'),
+    api.get('/api/current-week.php'),
   
   getGames: (weekId) => 
-    api.get(`/footballpicks/api/games.php?week=${weekId}`),
+    api.get(`/api/games.php?week=${weekId}`),
   
   getPicks: (weekId) => 
-    api.get(`/footballpicks/api/picks.php?week=${weekId}`),
+    api.get(`/api/picks.php?week=${weekId}`),
   
   submitPicks: (weekId, picks) => 
-    api.post('/footballpicks/picks.php', transformRequest({
+    api.post('/picks.php', transformRequest({
       week: weekId,
       Submit: 'Submit',
       ...picks
@@ -69,16 +91,16 @@ export const gameAPI = {
 
 export const statsAPI = {
   getWeeklyStandings: (weekId, tag = 0) => 
-    api.get(`/footballpicks/api/weekly-standings.php?week=${weekId}&tag=${tag}`),
+    api.get(`/api/weekly-standings.php?week=${weekId}&tag=${tag}`),
   
   getOverallStandings: (tag = 0) => 
-    api.get(`/footballpicks/api/overall-standings.php?tag=${tag}`),
+    api.get('/api/overall-standings.php?tag=${tag}'),
   
   getTeamStats: () => 
-    api.get('/footballpicks/api/team-stats.php'),
+    api.get('/api/team-stats.php'),
   
   getHomeStats: () => 
-    api.get('/footballpicks/api/home-stats.php')
+    api.get('/api/home-stats.php')
 };
 
 export default api;

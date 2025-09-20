@@ -22,13 +22,13 @@ export function AuthProvider({ children }) {
 
   const checkAuthStatus = async () => {
     try {
-      // Check session status using the existing PHP session system
+      // Check session status using the existing API
       const response = await authAPI.checkSession();
-      if (response.data.authenticated) {
+      if (response.data && (response.data.authenticated || response.data.success)) {
         setUser(response.data.user);
       }
     } catch (error) {
-      console.log('No active session');
+      console.log('No active session:', error.message);
     } finally {
       setLoading(false);
     }
@@ -36,26 +36,31 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     try {
-      // Use the existing PHP login system directly
       const response = await authAPI.login(email, password);
       
-      // The PHP system will either redirect on success or show login form on failure
-      // We need to check if we got redirected or if login was successful
-      if (response.status === 200) {
-        // Check session after login attempt
+      // Check if login was successful
+      if (response.data && response.data.success) {
+        // Login successful, user data should be in response
+        setUser(response.data.user);
+        return { success: true };
+      } else if (response.status === 200) {
+        // Fallback: check session after login attempt
         const sessionResponse = await authAPI.checkSession();
-        if (sessionResponse.data.authenticated) {
+        if (sessionResponse.data && (sessionResponse.data.authenticated || sessionResponse.data.success)) {
           setUser(sessionResponse.data.user);
           return { success: true };
         } else {
-          return { success: false, error: 'Invalid email or password' };
+          return { success: false, error: response.data?.error || 'Invalid email or password' };
         }
       } else {
-        return { success: false, error: 'Login failed' };
+        return { success: false, error: response.data?.error || 'Login failed' };
       }
     } catch (error) {
       console.error('Login error:', error);
-      return { success: false, error: 'Network error - make sure the PHP backend is running' };
+      if (error.response && error.response.data && error.response.data.error) {
+        return { success: false, error: error.response.data.error };
+      }
+      return { success: false, error: 'Network error - unable to connect to server' };
     }
   };
 
