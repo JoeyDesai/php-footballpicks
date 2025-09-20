@@ -1,13 +1,13 @@
 import axios from 'axios';
 
-// Base URL for the PHP backend - adjust this to match your server
-const BASE_URL = 'https://jasetheace.com/footballpicks';
+// Base URL for the PHP backend - using relative path since we're serving from same domain
+const BASE_URL = '';
 
 const api = axios.create({
   baseURL: BASE_URL,
   withCredentials: true, // Important for session-based auth
   headers: {
-    'Content-Type': 'application/x-www-form-urlencoded',
+    'Content-Type': 'application/x-www-form-urlencoded'
   },
 });
 
@@ -25,7 +25,7 @@ const transformRequest = (data) => {
 
 export const authAPI = {
   login: (email, password) => 
-    api.post('/login.php', transformRequest({ Email: email, Pass: password })),
+    api.post('/index.php', transformRequest({ Email: email, Pass: password })),
   
   logout: () => 
     api.get('/logout.php'),
@@ -42,7 +42,7 @@ export const authAPI = {
     })),
   
   checkSession: () => 
-    api.get('/api/check-session.php')
+    api.get('/api/session-check.php')
 };
 
 export const gameAPI = {

@@ -36,14 +36,28 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     try {
-      const response = await authAPI.login(email, password);
-      if (response.data.success) {
-        setUser(response.data.user);
+      // Use the login handler API endpoint
+      const response = await fetch('/api/login-handler.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        credentials: 'include',
+        body: new URLSearchParams({
+          Email: email,
+          Pass: password
+        })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setUser(data.user);
         return { success: true };
       } else {
-        return { success: false, error: response.data.error || 'Login failed' };
+        return { success: false, error: data.error || 'Login failed' };
       }
     } catch (error) {
+      console.error('Login error:', error);
       return { success: false, error: 'Network error' };
     }
   };
