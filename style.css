@@ -1,0 +1,389 @@
+/* style.css - a simple style sheet */
+body {
+  margin-left: 5%; margin-right: 5%;
+  color: black; background: white;
+  font-family: serif;
+}
+
+tr.attention { background-color: #FFFF00; }
+
+tr.normal { background-color: #FFFFFF; }
+
+div.attention {
+  color: #FF0000;
+  font-weight: bold;
+  border: solid;
+  border-color:  black;
+  padding:  1%;
+}
+
+div.heading {
+  border: solid;
+  border-width:  thick;
+  border-color:  black;
+  width:  701px;
+  font-weight: bold;
+  background-color:  blue;
+  font-size: xx-large;
+  text-align:  center;
+  color:  white;
+  /* padding:  2%; */
+  padding: 20px;
+}
+
+div.heading-sep {
+  border-left: solid;
+  border-right: solid;
+  border-color:  black;
+  width:  745px;
+  background-color:  #dddddd;
+  text-align:  center;
+  color:  white;
+}
+
+div.main {
+}
+
+A:link { color: blue; text-decoration: none}
+A:visited { color: blue; text-decoration: none}
+A:hover { color: blue; background-color: #dddddd; text-decoration: underline}
+  
+div.weeknav {
+  border: solid;
+  border-color:  black;
+  width:  745px;
+  font-weight: bold;
+  background-color:  blue;
+  font-size:  small;
+  text-align:  center;
+  color:  white;
+}
+
+.weeknav A:link { color: white; text-decoration: none;}
+.weeknav A:visited { color: white; text-decoration: none;}
+.weeknav A:hover { color: blue; background-color: #dddddd; text-decoration: underline;}
+
+table.picks {
+  border: none;
+  border-color: #dddddd;
+}
+table.picks tr:hover {
+  /* background-color:  #dddddd; */
+}
+table.picks td {
+}
+
+table.highlight tr:hover {
+  background-color:  #dddddd;
+}
+.pgtitle {
+  font-weight:  bold;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+.instructions {
+  font-weight:  normal;
+  font-style:  italic;
+  color:  gray;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+.rightpick {
+  color: blue;
+  font-weight:  bold;
+}
+.wrongpick {
+  color: grey;
+}
+.maybepick {
+  color: green;
+}
+
+th.awaycell {
+  border-width: 1px;
+/*  border-style: none none solid none; */
+  border-style: none none none none;
+}
+
+th.homecell {
+  border-width: 1px;
+/*  border-style: none solid solid none; */
+  border-style: none solid none none;
+}
+
+
+table.stats th.infocell {
+  border-width: 1px;
+  border-style: none solid solid none;
+  font-size: 75%;
+}
+
+th.infocellend {
+  border-width: 1px;
+  border-style: none none solid none;
+}
+
+th.redzone {
+  color:red;
+  border-color:black;
+}
+
+td.awaycell {
+  border-width: 1px;
+  border-style: none none solid none;
+  text-align: center;
+}
+
+td.homecell {
+  border-width: 1px;
+  border-style: none solid solid none;
+  text-align: center;
+}
+
+table.stats {
+  border: none;
+  border-color: #dddddd;
+  border-collapse: collapse;
+}
+table.stats tr.myname {
+  background-color:  #dddddd;
+}
+table.stats tr:not(.nohover):hover {
+  background-color:  #eded77;
+}
+table.stats th {
+  font-size: small;
+}
+table.stats td {
+}
+
+.ok {
+  background-color:  #00ff00;
+}
+.no {
+  background-color:  #ff0000;
+}
+th.statheader {
+  font-weight: bold;
+  color: blue;
+  text-align:left;
+  border-bottom-style: solid;
+  border-width: 1px;
+  border-color: black;
+}
+th.total {
+  font-weight: bold;
+  color: blue;
+  text-align:right;
+  border-bottom-style: solid;
+  border-width: 1px;
+  border-color: black;
+}
+td.total {
+  font-weight: bold;
+  color: blue;
+}
+td.name {
+  font-weight: bold;
+}
+th.count {
+  text-align:right;
+  border-right-style: solid;
+  border-bottom-style: solid;
+  border-width: 1px;
+  border-color: black;
+}
+td.count {
+  color: gray;
+  text-align:right;
+  border-right-style: solid;
+  border-width: 1px;
+  border-color: black;
+}
+
+table.sortable span.sortarrow {
+    color: black;
+    text-decoration: none;
+}
+
+table.sortable {
+  border: none;
+  border-color: #dddddd;
+  border-collapse: collapse;
+}
+table.sortable tr.myname {
+  background-color:  #dddddd;
+}
+table.sortable tr:hover {
+  background-color:  #eded77;
+}
+table.sortable th {
+  font-size: small;
+}
+table.sortable td {
+}
+
+.pickslogo {
+  /* 
+  float:left;
+  padding-top:1px;
+  padding-bottom:1px;
+  */
+  height:20px;
+  position:relative;
+  top:4px;
+}
+
+/*  Begin stats css */
+table.smallstats{
+	border-collapse:collapse;
+	border:none;
+	border:0;
+	float:left;
+	margin-right:50px;
+}
+.smallstats td,
+.smallstats th{
+	padding:5px 10px;
+	text-align:left;
+}
+.smallstats tr {
+	background-color:#e5e5e5;
+}
+.smallstats th{
+	background-color:#bbb;
+}
+.smallstats .even td{
+	background-color:#f0f0f0;
+}
+.smallstats .title{
+	text-align:center;
+	background-color:transparent;
+	font-size:110%;
+	font-weight:bold;
+	padding-bottom:8px;
+}
+
+.highlight2 {
+  background-color:  #fdfd87;
+}
+
+div.org_container {
+  display: inline-block;
+  padding-right: 25px;
+}
+
+div.org {
+  padding:5px;
+}
+
+div.game_odds {
+}
+
+div.row_odd {
+  background:#DDDDDD;
+}
+
+div.team {
+  display: inline-block;
+  width: 110px;
+}
+
+div.at {
+  display: inline-block;
+  width: 38px;
+}
+
+div.num {
+  display: inline-block;
+  width: 24px;
+}
+
+div.away div.home {
+}
+
+div.should_win {
+	font-weight:bold;
+}
+
+#sortableContainer {
+/*  width: 300px;
+  margin: 0 auto;
+  */
+}
+.sortableDiv {
+  background-color: #f5f5f5;
+  /* padding: 10px; */
+  margin: 5px 0;
+  cursor: grab;
+  width: 535px;
+  white-space: nowrap;
+}
+.sortableDiv.dragging {
+  background-color: #ddd;
+}
+.teampick {
+  width: 242px;
+  margin-right: 2px;
+  display: inline-block;
+}
+.weight {
+  width: 31px;
+  margin-right: 6px;
+  display: inline-block;
+  text-align: center;
+}
+.at {
+  width: 10px;
+  display: inline-block;
+}
+.highlighted {
+  background-color: yellow;
+  transition: background-color 0.3s ease;
+}
+.correct {
+  background-color: #00ff00;
+  transition: background-color 0.3s ease;
+}
+.incorrect {
+  background-color: red;
+  transition: background-color 0.3s ease;
+}
+
+/* Tag filtering container */
+.tagbar {
+  /* background-color: #333; */   /* dark background */
+  /* padding: 0.5rem 1rem; */
+}
+
+/* List styling */
+.tagbar ul {
+  list-style: none;   /* no bullets */
+  margin: 0;
+  padding: 0;
+  display: flex;      /* horizontal */
+  gap: 1rem 0rem;          /* spacing between items */
+}
+
+/* Link styling */
+.tagbar a {
+  color: white;               /* text color */
+  text-decoration: none;      /* remove underline */
+  padding: 0.5rem 1rem;       /* clickable area */
+  display: block;
+  border-radius: 5px;         /* rounded hover look */
+  transition: background 0.3s;
+}
+
+/* Hover effect */
+.tagbar a:hover {
+  background-color: #555;     /* lighter on hover */
+}
+
+/* Active/selected link */
+.tagbar .active {
+  background-color: #007BFF;  /* highlight active page */
+}
+/* End stats css */
