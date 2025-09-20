@@ -38,22 +38,17 @@ export function AuthProvider({ children }) {
     try {
       const response = await authAPI.login(email, password);
       
-      // Check if login was successful
       if (response.data && response.data.success) {
-        // Login successful, user data should be in response
-        setUser(response.data.user);
+        // Login successful, set basic user object
+        setUser({ 
+          id: 1, 
+          email: email,
+          nickname: email, // Use email as nickname for now
+          realName: email 
+        });
         return { success: true };
-      } else if (response.status === 200) {
-        // Fallback: check session after login attempt
-        const sessionResponse = await authAPI.checkSession();
-        if (sessionResponse.data && (sessionResponse.data.authenticated || sessionResponse.data.success)) {
-          setUser(sessionResponse.data.user);
-          return { success: true };
-        } else {
-          return { success: false, error: response.data?.error || 'Invalid email or password' };
-        }
       } else {
-        return { success: false, error: response.data?.error || 'Login failed' };
+        return { success: false, error: response.data?.error || 'Invalid email or password' };
       }
     } catch (error) {
       console.error('Login error:', error);

@@ -1,12 +1,12 @@
 // API service for Football Picks app
 import axios from 'axios';
 
-// Use the existing API endpoint
+// Use the existing server
 const BASE_URL = 'https://jasetheace.com/footballpicks';
 
 const api = axios.create({
   baseURL: BASE_URL,
-  withCredentials: true, // Important for session-based auth
+  withCredentials: true, // Important for cookie-based auth
   headers: {
     'Content-Type': 'application/x-www-form-urlencoded'
   },
@@ -25,21 +25,34 @@ const transformRequest = (data) => {
 };
 
 export const authAPI = {
-  // Try the API endpoint first, fallback to main login
+  // Login through the normal login page to establish session cookie
   login: async (email, password) => {
     try {
-      // First try the API endpoint
-      const response = await api.post('/api/login.php', transformRequest({ 
+      // Login through the main page to establish session
+      const response = await api.post('/', transformRequest({ 
         Email: email, 
         Pass: password 
       }));
-      return response;
+      
+      // Check if login was successful by testing API access
+      const apiTest = await api.get('/api/info');
+      if (apiTest.status === 200) {
+        // Login successful, get user info from session
+        return { data: { success: true } };
+      } else {
+        return { data: { success: false, error: 'Invalid credentials' } };
+      }
     } catch (error) {
-      // Fallback to main login page
-      return api.post('/', transformRequest({ 
-        Email: email, 
-        Pass: password 
-      }));
+      if (error.response && error.response.status === 200) {
+        // Sometimes PHP redirects are seen as errors, check if we can access API
+        try {
+          await api.get('/api/info');
+          return { data: { success: true } };
+        } catch (apiError) {
+          return { data: { success: false, error: 'Invalid credentials' } };
+        }
+      }
+      return { data: { success: false, error: 'Network error - unable to connect to server' } };
     }
   },
   
@@ -57,50 +70,85 @@ export const authAPI = {
       SUBMIT: 'Sign Up'
     })),
   
+  // Check if we have a valid session by testing API access
   checkSession: async () => {
     try {
-      // Try API endpoint first
-      return await api.get('/api/check-session.php');
+      const response = await api.get('/api/info');
+      if (response.status === 200) {
+        return { data: { authenticated: true, user: { id: 1 } } }; // Basic user object
+      }
+      return { data: { authenticated: false } };
     } catch (error) {
-      // Fallback to session check
-      return api.get('/api/session-check.php');
+      return { data: { authenticated: false } };
     }
   }
 };
 
 export const gameAPI = {
-  getWeeks: () => 
-    api.get('/api/weeks.php'),
+  // Get current year and week info
+  getInfo: () => 
+    api.get('/api/info'),
+  
+  // Get weeks - we'll need to create this or use existing pages
+  getWeeks: async () => {
+    try {
+      const info = await api.get('/api/info');
+      // For now, return basic week structure - you may need to enhance this
+      return { 
+        data: { 
+          success: true, 
+          weeks: [{ id: info.data.week, number: info.data.week, current: true }] 
+        } 
+      };
+    } catch (error) {
+      return { data: { success: false, error: 'Failed to load weeks' } };
+    }
+  },
   
   getCurrentWeek: () => 
-    api.get('/api/current-week.php'),
+    api.get('/api/info'),
   
-  getGames: (weekId) => 
-    api.get(`/api/games.php?week=${weekId}`),
+  // Get games for a week - may need to use existing pages
+  getGames: (weekId) => {
+    // This might need to use existing picks page or create new endpoint
+    return api.get(`/picks.php?week=${weekId}`);
+  },
   
-  getPicks: (weekId) => 
-    api.get(`/api/picks.php?week=${weekId}`),
+  // Get picks for a week using API
+  getPicks: (weekNum) => 
+    api.get(`/api/picks/${weekNum}`),
   
-  submitPicks: (weekId, picks) => 
-    api.post('/picks.php', transformRequest({
-      week: weekId,
-      Submit: 'Submit',
-      ...picks
-    }))
+  // Submit picks using API  
+  submitPicks: (weekNum, picks) => 
+    api.post(`/api/picks/${weekNum}`, transformRequest(picks))
 };
 
 export const statsAPI = {
+  // These will need to use existing pages since API doesn't mention them
   getWeeklyStandings: (weekId, tag = 0) => 
-    api.get(`/api/weekly-standings.php?week=${weekId}&tag=${tag}`),
+    api.get(`/group.php?week=${weekId}`),
   
   getOverallStandings: (tag = 0) => 
-    api.get('/api/overall-standings.php?tag=${tag}'),
+    api.get('/group.php'),
   
   getTeamStats: () => 
-    api.get('/api/team-stats.php'),
+    api.get('/teamstats.php'),
   
-  getHomeStats: () => 
-    api.get('/api/home-stats.php')
+  getHomeStats: async () => {
+    try {
+      const info = await api.get('/api/info');
+      return { 
+        data: { 
+          success: true, 
+          currentWeek: { number: info.data.week },
+          weeklyStandings: [],
+          overallStandings: []
+        } 
+      };
+    } catch (error) {
+      return { data: { success: false } };
+    }
+  }
 };
 
 export default api;
