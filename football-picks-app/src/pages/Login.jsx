@@ -56,7 +56,7 @@ function Login() {
             <div className="input-wrapper">
               <Mail className="input-icon" />
               <input
-                type="email"
+                type="text"
                 id="email"
                 name="email"
                 value={formData.email}
