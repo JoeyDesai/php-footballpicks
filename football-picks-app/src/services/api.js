@@ -1,7 +1,8 @@
 import axios from 'axios';
 
-// Base URL for the PHP backend - using relative path since we're serving from same domain
-const BASE_URL = '';
+// Since we're running on different ports, we need to use the full URL to the PHP backend
+// Assuming the PHP app runs on the same host but different port or path
+const BASE_URL = 'http://localhost'; // Adjust this to match your PHP server
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -25,13 +26,13 @@ const transformRequest = (data) => {
 
 export const authAPI = {
   login: (email, password) => 
-    api.post('/index.php', transformRequest({ Email: email, Pass: password })),
+    api.post('/footballpicks/', transformRequest({ Email: email, Pass: password })),
   
   logout: () => 
-    api.get('/logout.php'),
+    api.get('/footballpicks/logout.php'),
   
   createAccount: (userData) => 
-    api.post('/createaccount.php', transformRequest({
+    api.post('/footballpicks/createaccount.php', transformRequest({
       email: userData.email,
       name: userData.realName,
       nick: userData.nickName,
@@ -42,24 +43,24 @@ export const authAPI = {
     })),
   
   checkSession: () => 
-    api.get('/api/session-check.php')
+    api.get('/footballpicks/api/session-check.php')
 };
 
 export const gameAPI = {
   getWeeks: () => 
-    api.get('/api/weeks.php'),
+    api.get('/footballpicks/api/weeks.php'),
   
   getCurrentWeek: () => 
-    api.get('/api/current-week.php'),
+    api.get('/footballpicks/api/current-week.php'),
   
   getGames: (weekId) => 
-    api.get(`/api/games.php?week=${weekId}`),
+    api.get(`/footballpicks/api/games.php?week=${weekId}`),
   
   getPicks: (weekId) => 
-    api.get(`/api/picks.php?week=${weekId}`),
+    api.get(`/footballpicks/api/picks.php?week=${weekId}`),
   
   submitPicks: (weekId, picks) => 
-    api.post('/picks.php', transformRequest({
+    api.post('/footballpicks/picks.php', transformRequest({
       week: weekId,
       Submit: 'Submit',
       ...picks
@@ -68,16 +69,16 @@ export const gameAPI = {
 
 export const statsAPI = {
   getWeeklyStandings: (weekId, tag = 0) => 
-    api.get(`/api/weekly-standings.php?week=${weekId}&tag=${tag}`),
+    api.get(`/footballpicks/api/weekly-standings.php?week=${weekId}&tag=${tag}`),
   
   getOverallStandings: (tag = 0) => 
-    api.get(`/api/overall-standings.php?tag=${tag}`),
+    api.get(`/footballpicks/api/overall-standings.php?tag=${tag}`),
   
   getTeamStats: () => 
-    api.get('/api/team-stats.php'),
+    api.get('/footballpicks/api/team-stats.php'),
   
   getHomeStats: () => 
-    api.get('/api/home-stats.php')
+    api.get('/footballpicks/api/home-stats.php')
 };
 
 export default api;

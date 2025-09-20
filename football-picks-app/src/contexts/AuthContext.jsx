@@ -22,7 +22,7 @@ export function AuthProvider({ children }) {
 
   const checkAuthStatus = async () => {
     try {
-      // Since the original app uses PHP sessions, we'll make a request to check session status
+      // Check session status using the existing PHP session system
       const response = await authAPI.checkSession();
       if (response.data.authenticated) {
         setUser(response.data.user);
@@ -36,29 +36,26 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     try {
-      // Use the login handler API endpoint
-      const response = await fetch('/api/login-handler.php', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        credentials: 'include',
-        body: new URLSearchParams({
-          Email: email,
-          Pass: password
-        })
-      });
+      // Use the existing PHP login system directly
+      const response = await authAPI.login(email, password);
       
-      const data = await response.json();
-      if (data.success) {
-        setUser(data.user);
-        return { success: true };
+      // The PHP system will either redirect on success or show login form on failure
+      // We need to check if we got redirected or if login was successful
+      if (response.status === 200) {
+        // Check session after login attempt
+        const sessionResponse = await authAPI.checkSession();
+        if (sessionResponse.data.authenticated) {
+          setUser(sessionResponse.data.user);
+          return { success: true };
+        } else {
+          return { success: false, error: 'Invalid email or password' };
+        }
       } else {
-        return { success: false, error: data.error || 'Login failed' };
+        return { success: false, error: 'Login failed' };
       }
     } catch (error) {
       console.error('Login error:', error);
-      return { success: false, error: 'Network error' };
+      return { success: false, error: 'Network error - make sure the PHP backend is running' };
     }
   };
 
@@ -75,13 +72,15 @@ export function AuthProvider({ children }) {
   const createAccount = async (userData) => {
     try {
       const response = await authAPI.createAccount(userData);
-      if (response.data.success) {
+      // The PHP system will show success message or errors
+      if (response.status === 200) {
         return { success: true };
       } else {
-        return { success: false, error: response.data.error || 'Account creation failed' };
+        return { success: false, error: 'Account creation failed' };
       }
     } catch (error) {
-      return { success: false, error: 'Network error' };
+      console.error('Create account error:', error);
+      return { success: false, error: 'Network error - make sure the PHP backend is running' };
     }
   };
 
