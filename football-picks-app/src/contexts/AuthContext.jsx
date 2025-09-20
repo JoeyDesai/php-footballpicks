@@ -16,15 +16,13 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already logged in (session-based)
     checkAuthStatus();
   }, []);
 
   const checkAuthStatus = async () => {
     try {
-      // Check session status using the existing API
       const response = await authAPI.checkSession();
-      if (response.data && (response.data.authenticated || response.data.success)) {
+      if (response.data && response.data.authenticated) {
         setUser(response.data.user);
       }
     } catch (error) {
@@ -39,13 +37,7 @@ export function AuthProvider({ children }) {
       const response = await authAPI.login(email, password);
       
       if (response.data && response.data.success) {
-        // Login successful, set basic user object
-        setUser({ 
-          id: 1, 
-          email: email,
-          nickname: email, // Use email as nickname for now
-          realName: email 
-        });
+        setUser(response.data.user);
         return { success: true };
       } else {
         return { success: false, error: response.data?.error || 'Invalid email or password' };
@@ -55,7 +47,7 @@ export function AuthProvider({ children }) {
       if (error.response && error.response.data && error.response.data.error) {
         return { success: false, error: error.response.data.error };
       }
-      return { success: false, error: 'Network error - unable to connect to server' };
+      return { success: false, error: 'Network error - make sure the backend server is running on port 3001' };
     }
   };
 
@@ -72,15 +64,17 @@ export function AuthProvider({ children }) {
   const createAccount = async (userData) => {
     try {
       const response = await authAPI.createAccount(userData);
-      // The PHP system will show success message or errors
-      if (response.status === 200) {
+      if (response.data && response.data.success) {
         return { success: true };
       } else {
-        return { success: false, error: 'Account creation failed' };
+        return { success: false, error: response.data?.error || 'Account creation failed' };
       }
     } catch (error) {
       console.error('Create account error:', error);
-      return { success: false, error: 'Network error - make sure the PHP backend is running' };
+      if (error.response && error.response.data && error.response.data.error) {
+        return { success: false, error: error.response.data.error };
+      }
+      return { success: false, error: 'Network error - make sure the backend server is running on port 3001' };
     }
   };
 
