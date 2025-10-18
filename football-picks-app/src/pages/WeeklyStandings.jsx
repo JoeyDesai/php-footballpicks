@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { statsAPI, gameAPI } from '../services/api';
+import { statsAPI, gameAPI, authAPI } from '../services/api';
 import CustomDropdown from '../components/CustomDropdown';
 
 // Utility function to format numbers - remove .0 but keep other decimals
@@ -22,10 +22,8 @@ function WeeklyStandings() {
   const [viewMode, setViewMode] = useState('quick'); // 'quick' or 'full'
   const [selectedRows, setSelectedRows] = useState([]);
   const [autoRefresh, setAutoRefresh] = useState(false);
-  const [availableTags] = useState([
-    { id: 0, name: 'All' },
-    { id: 1, name: 'Family' },
-    { id: 2, name: 'Extended Family' }
+  const [availableTags, setAvailableTags] = useState([
+    { id: 0, name: 'All' }
   ]);
 
   // Sync horizontal scrolling between header and body
@@ -46,6 +44,7 @@ function WeeklyStandings() {
 
   useEffect(() => {
     loadWeeks();
+    loadUserTags();
     
     // Check for auto refresh on page load
     if (window.location.hash === '#autoreload') {
@@ -76,6 +75,17 @@ function WeeklyStandings() {
     };
   }, [autoRefresh]);
 
+  const loadUserTags = async () => {
+    try {
+      const response = await authAPI.getUserTags();
+      if (response.data.success) {
+        setAvailableTags(response.data.tags);
+      }
+    } catch (error) {
+      console.error('Error loading user tags:', error);
+    }
+  };
+
   const loadWeeks = async () => {
     try {
       const response = await gameAPI.getWeeks();
@@ -98,7 +108,7 @@ function WeeklyStandings() {
         const response = await statsAPI.getWeeklyStandings(selectedWeek.id, selectedTag);
         if (response.data.success) {
           // For quick view, we need to get the full data to calculate potential correctly
-          const fullResponse = await statsAPI.getWeeklyStandingsClassic(selectedWeek.id);
+          const fullResponse = await statsAPI.getWeeklyStandingsClassic(selectedWeek.id, selectedTag);
           if (fullResponse.data.success) {
             // Calculate potential score as: points from ALL games (assuming they pick correctly on remaining)
             const standingsWithPotential = response.data.standings.map(player => {
@@ -154,7 +164,7 @@ function WeeklyStandings() {
           }
         }
       } else {
-        const response = await statsAPI.getWeeklyStandingsClassic(selectedWeek.id);
+        const response = await statsAPI.getWeeklyStandingsClassic(selectedWeek.id, selectedTag);
         if (response.data.success) {
           // Calculate potential score as: points from ALL games (assuming they pick correctly on remaining)
           const standingsWithPotential = response.data.standings.map(player => {

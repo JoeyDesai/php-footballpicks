@@ -18,6 +18,17 @@ function MakePicks() {
   const [viewMode, setViewMode] = useState('tiles'); // 'tiles', 'classic', 'dragdrop'
   const [autoPickHighest, setAutoPickHighest] = useState(true);
   const [validationErrors, setValidationErrors] = useState([]);
+  const [draggedGameId, setDraggedGameId] = useState(null);
+  const [dragOverGameId, setDragOverGameId] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [headerScrollInterval, setHeaderScrollInterval] = useState(null);
+  
+  // Mobile detection
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // Mobile animation state
+  const [animatingGames, setAnimatingGames] = useState(new Set());
+  const [animationDirection, setAnimationDirection] = useState({});
 
   // Helper function to map team names to image file names
   const getTeamImageName = (teamName) => {
@@ -87,6 +98,56 @@ function MakePicks() {
       loadGamesAndPicks();
     }
   }, [selectedWeek]);
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                            window.innerWidth <= 768 || 
+                            ('ontouchstart' in window);
+      setIsMobile(isMobileDevice);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Auto-assign point values when switching to drag-drop view
+  useEffect(() => {
+    if (viewMode === 'dragdrop' && games.length > 0) {
+      const orderedGames = [...games].sort((a, b) => {
+        const aValue = picks[`VAL${a.id}`] || 0;
+        const bValue = picks[`VAL${b.id}`] || 0;
+        return bValue - aValue;
+      });
+
+      const newPicks = { ...picks };
+      let hasChanges = false;
+      
+      orderedGames.forEach((game, index) => {
+        const expectedValue = games.length - index;
+        if (!picks[`VAL${game.id}`] || picks[`VAL${game.id}`] === 0) {
+          newPicks[`VAL${game.id}`] = expectedValue;
+          hasChanges = true;
+        }
+      });
+      
+      if (hasChanges) {
+        setPicks(newPicks);
+      }
+    }
+  }, [viewMode, games.length]);
+
+  // Cleanup header scroll on unmount
+  useEffect(() => {
+    return () => {
+      if (headerScrollInterval) {
+        clearInterval(headerScrollInterval);
+      }
+    };
+  }, [headerScrollInterval]);
+
 
   const loadWeeks = async () => {
     try {
@@ -227,6 +288,102 @@ function MakePicks() {
     // Set the new point value
     currentPicks[`VAL${gameId}`] = targetPointValue;
     setPicks(currentPicks);
+    setError('');
+    setSuccess('');
+    
+    // Only clear validation errors if picks are now valid
+    const errors = validatePicks();
+    if (errors.length === 0) {
+      setValidationErrors([]);
+    }
+  };
+
+  // New drag and drop reorder handlers
+  const handleDragStart = (e, gameId) => {
+    setDraggedGameId(gameId);
+    e.dataTransfer.setData('text/plain', gameId.toString());
+    e.dataTransfer.effectAllowed = 'move';
+    // Immediately set drag over to prevent timing issues
+    setDragOverGameId(gameId);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedGameId(null);
+    setDragOverGameId(null);
+    // Clear header scroll when drag ends
+    if (headerScrollInterval) {
+      clearInterval(headerScrollInterval);
+      setHeaderScrollInterval(null);
+    }
+  };
+
+  const handleDragOverGame = (e, gameId, index) => {
+    e.preventDefault();
+    // Only update if the target has actually changed
+    if (dragOverGameId !== gameId || dragOverIndex !== index) {
+      setDragOverGameId(gameId);
+      setDragOverIndex(index);
+    }
+    
+    // Check for header auto-scroll
+    handleHeaderScroll(e);
+  };
+
+  const handleDragLeaveGame = () => {
+    // Don't clear immediately to prevent flickering
+    // The drag over will handle setting the correct target
+  };
+
+  const handleHeaderScroll = (e) => {
+    const headerThreshold = 50; // Distance from header to start scrolling
+    const scrollSpeed = 2; // Pixels to scroll per interval
+    const scrollInterval = 50; // Milliseconds between scrolls
+    
+    const mouseY = e.clientY;
+    
+    // Clear existing header scroll
+    if (headerScrollInterval) {
+      clearInterval(headerScrollInterval);
+      setHeaderScrollInterval(null);
+    }
+    
+    // Only scroll if mouse is within 50px of the top of the viewport
+    if (mouseY < headerThreshold) {
+      const scrollUp = setInterval(() => {
+        window.scrollBy(0, -scrollSpeed);
+      }, scrollInterval);
+      setHeaderScrollInterval(scrollUp);
+    }
+  };
+
+
+
+  const handleDragDropReorder = (draggedGameId, targetGameId) => {
+    const draggedGameValue = picks[`VAL${draggedGameId}`] || 0;
+    const targetGameValue = picks[`VAL${targetGameId}`] || 0;
+    
+    if (draggedGameValue === targetGameValue) return;
+    
+    const newPicks = { ...picks };
+    
+    // Find the dragged game's current position and target position
+    const draggedIndex = orderedGames.findIndex(game => game.id === draggedGameId);
+    const targetIndex = orderedGames.findIndex(game => game.id === targetGameId);
+    
+    if (draggedIndex === -1 || targetIndex === -1) return;
+    
+    // Create new ordered array by moving the dragged game to target position
+    const newOrderedGames = [...orderedGames];
+    const [draggedGame] = newOrderedGames.splice(draggedIndex, 1);
+    newOrderedGames.splice(targetIndex, 0, draggedGame);
+    
+    // Reassign point values based on new order
+    newOrderedGames.forEach((game, index) => {
+      const newPointValue = games.length - index;
+      newPicks[`VAL${game.id}`] = newPointValue;
+    });
+    
+    setPicks(newPicks);
     setError('');
     setSuccess('');
     
@@ -710,85 +867,335 @@ function MakePicks() {
     </div>
   );
 
-  const renderDragDropView = () => (
-    <div className="games-container glass-container">
-      <div className="main-panel-header">
-        <h2>Week {selectedWeek?.number}</h2>
-        <p className="drag-instructions">Drag games to assign point values</p>
-      </div>
+  const renderDragDropView = () => {
+    // Create ordered games based on point values, auto-assign if not set
+    const orderedGames = [...games].sort((a, b) => {
+      const aValue = picks[`VAL${a.id}`] || 0;
+      const bValue = picks[`VAL${b.id}`] || 0;
+      return bValue - aValue; // Highest points first
+    });
+
+    // Updated drag drop reorder handler with access to orderedGames
+    const handleDragDropReorderWithOrder = (draggedGameId, targetGameId) => {
+      const draggedGameValue = picks[`VAL${draggedGameId}`] || 0;
+      const targetGameValue = picks[`VAL${targetGameId}`] || 0;
       
-      <div className="drag-drop-container">
-        <div className="point-sections">
-          {Array.from({ length: games.length }, (_, i) => {
-            const pointValue = i + 1;
-            const gameInSection = games.find(game => picks[`VAL${game.id}`] == pointValue);
+      if (draggedGameValue === targetGameValue) return;
+      
+      const newPicks = { ...picks };
+      
+      // Find the dragged game's current position and target position
+      const draggedIndex = orderedGames.findIndex(game => game.id === draggedGameId);
+      const targetIndex = orderedGames.findIndex(game => game.id === targetGameId);
+      
+      if (draggedIndex === -1 || targetIndex === -1) return;
+      
+      // Create new ordered array by moving the dragged game to target position
+      const newOrderedGames = [...orderedGames];
+      const [draggedGame] = newOrderedGames.splice(draggedIndex, 1);
+      newOrderedGames.splice(targetIndex, 0, draggedGame);
+      
+      // Reassign point values based on new order
+      newOrderedGames.forEach((game, index) => {
+        const newPointValue = games.length - index;
+        newPicks[`VAL${game.id}`] = newPointValue;
+      });
+      
+      setPicks(newPicks);
+      setError('');
+      setSuccess('');
+      
+      // Only clear validation errors if picks are now valid
+      const errors = validatePicks();
+      if (errors.length === 0) {
+        setValidationErrors([]);
+      }
+    };
+
+  // Mobile animation handler - both tiles disappear/reappear
+  const handleMobileSwap = (draggedGameId, targetGameId) => {
+    if (!isMobile) {
+      handleDragDropReorderWithOrder(draggedGameId, targetGameId);
+      return;
+    }
+
+    // Make both games disappear
+    setAnimatingGames(new Set([draggedGameId, targetGameId]));
+    
+    // Execute swap after both fade out
+    setTimeout(() => {
+      handleDragDropReorderWithOrder(draggedGameId, targetGameId);
+      
+      // Both reappear in new positions
+      setTimeout(() => {
+        setAnimatingGames(new Set());
+      }, 50);
+    }, 200);
+  };
+
+    return (
+      <div className="games-container glass-container">
+        <div className="main-panel-header">
+          <div className="header-row">
+            <h2>Week {selectedWeek?.number}</h2>
+          </div>
+        </div>
+        
+        <div 
+          className="drag-drop-games-list"
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // Allow dropping in the container
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const draggedGameId = parseInt(e.dataTransfer.getData('text/plain'));
+            if (draggedGameId && dragOverGameId) {
+              // Use the drag over target that was already calculated
+              handleDragDropReorderWithOrder(draggedGameId, dragOverGameId);
+            }
+          }}
+        >
+          {orderedGames.map((game, index) => {
+            const pointValue = games.length - index; // Auto-assigned based on position
+            const isDragging = draggedGameId === game.id;
+            const isDragOver = dragOverGameId === game.id;
+            
+            // Determine shift direction for smooth animation
+            let shiftClass = '';
+            if (draggedGameId && dragOverIndex !== null && !isDragging) {
+              const draggedIndex = orderedGames.findIndex(g => g.id === draggedGameId);
+              if (draggedIndex !== -1) {
+                // If dragging down (to higher index), shift rows up
+                if (draggedIndex < dragOverIndex) {
+                  if (index > draggedIndex && index <= dragOverIndex) {
+                    shiftClass = 'shift-up';
+                  }
+                }
+                // If dragging up (to lower index), shift rows down  
+                else if (draggedIndex > dragOverIndex) {
+                  if (index < draggedIndex && index >= dragOverIndex) {
+                    shiftClass = 'shift-down';
+                  }
+                }
+              }
+            }
             
             return (
-              <div key={pointValue} className="point-section">
-                <div className="point-section-header">
-                  <span className="point-value-label">{pointValue}</span>
-                </div>
+              <div key={game.id} className="drag-drop-game-container">
                 <div 
-                  className="point-section-content"
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, pointValue)}
+                  className={`drag-drop-game-row ${
+                    validationErrors.length > 0 && hasGameValidationError(game.id) ? 'validation-error' :
+                    isGameIncomplete(game.id) ? 'incomplete' : ''
+                  } ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''} ${shiftClass} ${
+                    animatingGames.has(game.id) ? 'swapping-up' : ''
+                  }`}
+                  draggable={!readOnly && !isMobile}
+                  onDragStart={(e) => handleDragStart(e, game.id)}
+                  onDragEnd={handleDragEnd}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDragOverGame(e, game.id, index);
+                  }}
+                  onDragLeave={handleDragLeaveGame}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const draggedGameId = parseInt(e.dataTransfer.getData('text/plain'));
+                    if (draggedGameId && draggedGameId !== game.id) {
+                      handleDragDropReorderWithOrder(draggedGameId, game.id);
+                    }
+                  }}
                 >
-                  {gameInSection ? (
-                    <div 
-                      className="dragged-game"
-                      draggable={!readOnly}
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData('text/plain', gameInSection.id.toString());
-                      }}
-                    >
+                <div className="drag-drop-game-row-main">
+                  {/* Away Team Info */}
+                  <div className="team-info-section away-team">
+                    <div className="team-logo-section mobile-logo">
                       <img 
-                        src={`/images/${getTeamImageName(gameInSection.away_name)}.svg`}
-                        alt={gameInSection.away_name}
-                        className="team-logo-tiny"
+                        src={`/images/${getTeamImageName(game.away_name)}.svg`}
+                        alt={game.away_name}
+                        className="team-logo-large"
                         onError={(e) => e.target.style.display = 'none'}
                       />
-                      <span className="game-text">
-                        {gameInSection.away_city} @ {gameInSection.home_city}
-                      </span>
                     </div>
-                  ) : (
-                    <div className="empty-slot">Drop here</div>
+                    <div className="team-name-small">
+                      <div className="team-record-small">
+                        {game.away_wins}-{game.away_losses}
+                        {game.away_ties > 0 && `-${game.away_ties}`}
+                      </div>
+                      <div className="team-location-small">Away</div>
+                    </div>
+                  </div>
+
+                  {/* Away Team Logo */}
+                  <div className="team-logo-section">
+                    <img 
+                      src={`/images/${getTeamImageName(game.away_name)}.svg`}
+                      alt={game.away_name}
+                      className="team-logo-large"
+                      onError={(e) => e.target.style.display = 'none'}
+                    />
+                  </div>
+
+                  {/* Away Team Radio Button */}
+                  <div className="radio-section">
+                    {!readOnly && (
+                      <label className="custom-radio">
+                        <input
+                          type="radio"
+                          name={`GAME${game.id}`}
+                          value={game.away_id}
+                          checked={picks[`GAME${game.id}`] == game.away_id}
+                          onChange={() => handlePickChange(game.id, game.away_id)}
+                        />
+                        <span className="radio-mark"></span>
+                      </label>
+                    )}
+                    {readOnly && picks[`GAME${game.id}`] == game.away_id && (
+                      <div className="pick-indicator">✓</div>
+                    )}
+                  </div>
+
+                  {/* VS Divider */}
+                  <div className="vs-divider">@</div>
+
+                  {/* Home Team Radio Button */}
+                  <div className="radio-section">
+                    {!readOnly && (
+                      <label className="custom-radio">
+                        <input
+                          type="radio"
+                          name={`GAME${game.id}`}
+                          value={game.home_id}
+                          checked={picks[`GAME${game.id}`] == game.home_id}
+                          onChange={() => handlePickChange(game.id, game.home_id)}
+                        />
+                        <span className="radio-mark"></span>
+                      </label>
+                    )}
+                    {readOnly && picks[`GAME${game.id}`] == game.home_id && (
+                      <div className="pick-indicator">✓</div>
+                    )}
+                  </div>
+
+                  {/* Home Team Logo */}
+                  <div className="team-logo-section">
+                    <img 
+                      src={`/images/${getTeamImageName(game.home_name)}.svg`}
+                      alt={game.home_name}
+                      className="team-logo-large"
+                      onError={(e) => e.target.style.display = 'none'}
+                    />
+                  </div>
+
+                  {/* Home Team Info */}
+                  <div className="team-info-section home-team">
+                    <div className="team-logo-section mobile-logo">
+                      <img 
+                        src={`/images/${getTeamImageName(game.home_name)}.svg`}
+                        alt={game.home_name}
+                        className="team-logo-large"
+                        onError={(e) => e.target.style.display = 'none'}
+                      />
+                    </div>
+                    <div className="team-name-small">
+                      <div className="team-record-small">
+                        {game.home_wins}-{game.home_losses}
+                        {game.home_ties > 0 && `-${game.home_ties}`}
+                      </div>
+                      <div className="team-location-small">Home</div>
+                    </div>
+                  </div>
+
+                  {/* Drag Handle */}
+                  {!readOnly && (
+                    <div className={`drag-handle ${isMobile ? 'mobile-drag-handle' : ''}`}>
+                      {isMobile ? (
+                        <div className="mobile-controls">
+                          <div className="mobile-arrows">
+                            <button 
+                              type="button"
+                              className="mobile-arrow-btn up"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (index > 0) {
+                                  const prevGame = orderedGames[index - 1];
+                                  handleMobileSwap(game.id, prevGame.id);
+                                }
+                              }}
+                              disabled={index === 0}
+                            >
+                              ↑
+                            </button>
+                            <button 
+                              type="button"
+                              className="mobile-arrow-btn down"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (index < orderedGames.length - 1) {
+                                  const nextGame = orderedGames[index + 1];
+                                  handleMobileSwap(game.id, nextGame.id);
+                                }
+                              }}
+                              disabled={index === orderedGames.length - 1}
+                            >
+                              ↓
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="drag-dots">
+                          <div className="dot"></div>
+                          <div className="dot"></div>
+                          <div className="dot"></div>
+                          <div className="dot"></div>
+                          <div className="dot"></div>
+                          <div className="dot"></div>
+                          <div className="dot"></div>
+                          <div className="dot"></div>
+                          <div className="dot"></div>
+                        </div>
+                      )}
+                    </div>
                   )}
+                </div>
+                </div>
+                
+                {/* Point Value Label - Outside Glass Panel */}
+                <div className="point-value-label-external">
+                  {pointValue}
                 </div>
               </div>
             );
           })}
         </div>
-        
-        <div className="available-games">
-          <h3>Available Games</h3>
-          <div className="games-list">
-            {games.filter(game => !picks[`VAL${game.id}`] || picks[`VAL${game.id}`] == 0).map(game => (
-              <div 
-                key={game.id} 
-                className="available-game"
-                draggable={!readOnly}
-                onDragStart={(e) => {
-                  e.dataTransfer.setData('text/plain', game.id.toString());
-                }}
-              >
-                <img 
-                  src={`/images/${getTeamImageName(game.away_name)}.svg`}
-                  alt={game.away_name}
-                  className="team-logo-tiny"
-                  onError={(e) => e.target.style.display = 'none'}
-                />
-                <span className="game-text">
-                  {game.away_city} @ {game.home_city}
-                </span>
-                <span className="game-time-small">{formatDateTime(game.date)}</span>
+
+        {!readOnly && (
+          <div className="submit-section">
+            <button
+              type="submit"
+              className="glass-button primary"
+              disabled={saving}
+            >
+              <Save size={20} />
+              {saving ? 'Saving...' : 'Save Picks'}
+            </button>
+            {validationErrors.length > 0 && (
+              <div className="validation-message">
+                <AlertCircle size={16} />
+                <span>Please complete all highlighted games</span>
               </div>
-            ))}
+            )}
           </div>
-        </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="picks-container">
@@ -825,8 +1232,8 @@ function MakePicks() {
                       className={`track-label ${viewMode === 'dragdrop' ? 'track-label-active' : 'track-label-inactive'}`}
                       onClick={() => setViewMode('dragdrop')}
                     >
-                      <span className="desktop-text">Drag n Drop</span>
-                      <span className="mobile-text">Drag</span>
+                      <span className="desktop-text">Order</span>
+                      <span className="mobile-text">Order</span>
                     </span>
                   </div>
                 </div>
@@ -892,6 +1299,14 @@ function MakePicks() {
           max-width: 1200px;
           margin: 0 auto;
           padding: 0 1rem 4rem 1rem;
+        }
+
+        /* Mobile: Wider glass panel with less padding */
+        @media (max-width: 768px) {
+          .picks-container {
+            max-width: 100%;
+            padding: 0 0.5rem 4rem 0.5rem;
+          }
         }
 
         /* Header Controls */
@@ -1647,9 +2062,9 @@ function MakePicks() {
         .team-info-section {
           display: flex;
           flex-direction: column;
-          gap: 0.25rem;
+          gap: 0.1rem;
           flex: 2;
-          max-width: 180px;
+          max-width: 200px;
         }
 
         .team-info-section.away-team {
@@ -1668,12 +2083,12 @@ function MakePicks() {
           justify-content: center;
           padding: 0;
           flex-shrink: 0;
-          width: 50px;
+          width: 35px;
         }
 
         .team-logo-large {
-          width: 35px;
-          height: 35px;
+          width: 30px;
+          height: 30px;
           object-fit: contain;
         }
 
@@ -1683,20 +2098,26 @@ function MakePicks() {
           justify-content: center;
           padding: 0;
           flex-shrink: 0;
-          width: 40px;
+          width: 25px;
         }
 
         .team-name-small {
           color: white;
           font-weight: 600;
           font-size: 0.9rem;
-          line-height: 1.2;
+          line-height: 1.1;
+          display: flex;
+          align-items: center;
+          gap: 0.3rem;
+          white-space: nowrap;
+          flex-wrap: nowrap;
         }
 
         .team-record-small {
           color: rgba(255, 255, 255, 0.6);
           font-size: 0.8rem;
-          line-height: 1.2;
+          line-height: 1.1;
+          white-space: nowrap;
         }
 
         .vs-divider {
@@ -1736,7 +2157,7 @@ function MakePicks() {
             flex-direction: column !important;
             gap: 0.25rem !important;
             flex: 2 !important;
-            max-width: 180px !important;
+            max-width: 200px !important;
             position: static !important;
           }
 
@@ -1751,7 +2172,7 @@ function MakePicks() {
           }
 
           .team-logo-section {
-            width: 50px !important;
+            width: 35px !important;
             padding: 0 !important;
             flex-shrink: 0 !important;
             margin-bottom: 0 !important;
@@ -1759,8 +2180,8 @@ function MakePicks() {
           }
 
           .team-logo-large {
-            width: 40px !important;
-            height: 40px !important;
+            width: 30px !important;
+            height: 30px !important;
           }
 
           /* Hide mobile logos on desktop */
@@ -1782,8 +2203,8 @@ function MakePicks() {
           }
 
           .team-logo-large {
-            width: 20px !important;
-            height: 20px !important;
+            width: 30px !important;
+            height: 30px !important;
           }
         }
 
@@ -1794,138 +2215,423 @@ function MakePicks() {
           margin: 0;
         }
 
-        .drag-drop-container {
-          display: grid;
-          grid-template-columns: 2fr 1fr;
-          gap: 2rem;
+        .drag-instructions p {
+          margin: 0;
+          text-align: center;
+          font-style: italic;
         }
 
-        @media (max-width: 768px) {
-          .drag-drop-container {
-            grid-template-columns: 1fr;
-            gap: 1rem;
-          }
-        }
-
-        .point-sections {
+        .drag-drop-games-list {
           display: flex;
           flex-direction: column;
-          gap: 1rem;
+          gap: 0.3rem;
+          position: relative;
+          z-index: auto;
+          min-height: 200px; /* Ensure there's always a drop zone */
+          padding: 0.5rem; /* Restore small padding */
         }
 
-        .point-section {
+        .drag-drop-game-container {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          width: 100%;
+          max-width: 100%;
+          padding: 0.1rem 0; /* Small vertical padding */
+        }
+
+        .drag-drop-games-list .point-value-label-external {
+          background: rgba(100, 150, 255, 0.2);
+          border: 0.5px solid rgba(100, 150, 255, 0.4);
+          border-radius: 3px;
+          padding: 0.15rem 0.25rem !important;
+          color: rgba(150, 200, 255, 1);
+          font-weight: 700;
+          font-size: 1rem;
+          min-width: 45px !important;
+          width: 45px !important;
+          height: 45px !important;
+          text-align: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          box-shadow: 0 1px 4px rgba(100, 150, 255, 0.2);
+          margin: 0; /* Remove any default margins */
+        }
+
+        .drag-drop-game-row {
+          display: flex;
+          flex-direction: column;
+          gap: 0.15rem;
+          padding: 0.5rem;
           background: rgba(255, 255, 255, 0.05);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 12px;
-          overflow: hidden;
+          border-radius: 4px;
+          transition: all 0.3s ease;
+          height: 50px;
+          min-height: 50px;
+          position: relative;
+          cursor: grab;
+          width: 100%;
+          max-width: 100%;
+          flex: 1;
         }
 
-        .point-section-header {
-          background: rgba(100, 150, 255, 0.2);
-          padding: 0.75rem;
-          text-align: center;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        .drag-drop-game-row-main {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 0.25rem;
+          width: 100%;
         }
 
-        .point-value-label {
-          color: white;
-          font-weight: 700;
+        /* Allow clicking anywhere to drag */
+        .team-info-section,
+        .team-logo-section,
+        .vs-divider,
+        .radio-section {
+          user-select: none;
+          -webkit-user-select: none;
+          -moz-user-select: none;
+          -ms-user-select: none;
+        }
+
+        .drag-drop-game-row:hover {
+          background: rgba(255, 255, 255, 0.08);
+        }
+
+        .drag-drop-game-row.dragging {
+          opacity: 0.5;
+          transform: rotate(2deg);
+          cursor: grabbing;
+        }
+
+        .drag-drop-game-row.drag-over {
+          background: rgba(100, 150, 255, 0.1);
+          border-color: rgba(100, 150, 255, 0.4);
+          transform: scale(1.02);
+          transition: all 0.1s ease;
+        }
+
+        .drag-drop-game-row.shift-up {
+          transform: translateY(-40px);
+          transition: transform 0.1s ease;
+        }
+
+          .drag-drop-game-row.shift-down {
+            transform: translateY(40px);
+            transition: transform 0.1s ease;
+          }
+
+          /* Mobile swap animations - simple disappear/reappear */
+          .drag-drop-game-row.swapping-up {
+            opacity: 0;
+            transition: opacity 0.2s ease;
+          }
+
+          .drag-drop-game-row.swapping-down {
+            opacity: 0;
+            transition: opacity 0.2s ease;
+          }
+
+        .drag-drop-game-row.incomplete {
+          box-shadow: 0 0 20px rgba(100, 150, 255, 0.3);
+          border-color: rgba(100, 150, 255, 0.4);
+        }
+
+        .drag-drop-game-row.validation-error {
+          box-shadow: 0 0 20px rgba(255, 100, 100, 0.4);
+          border-color: rgba(255, 100, 100, 0.6);
+        }
+
+        .mobile-drag-handle {
+          flex-direction: column;
+          align-items: center;
+          gap: 0.25rem;
+          padding: 0.5rem;
+          min-width: 50px;
+        }
+
+        .mobile-controls {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.25rem;
+          width: 100%;
+        }
+
+        .mobile-arrows {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+
+        .mobile-arrow-btn {
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          border-radius: 4px;
+          color: rgba(255, 255, 255, 0.8);
           font-size: 1.2rem;
-        }
-
-        .point-section-content {
-          padding: 1rem;
-          min-height: 80px;
+          font-weight: bold;
+          padding: 0.5rem;
+          min-width: 40px;
+          min-height: 40px;
+          cursor: pointer;
+          transition: all 0.2s ease;
           display: flex;
           align-items: center;
           justify-content: center;
         }
 
-        .dragged-game {
+        .mobile-arrow-btn:hover:not(:disabled) {
+          background: rgba(255, 255, 255, 0.2);
+          border-color: rgba(255, 255, 255, 0.5);
+          color: rgba(255, 255, 255, 1);
+          transform: scale(1.05);
+        }
+
+        .mobile-arrow-btn:active:not(:disabled) {
+          transform: scale(0.95);
+        }
+
+        .mobile-arrow-btn:disabled {
+          opacity: 0.3;
+          cursor: not-allowed;
+        }
+
+
+        .drag-handle {
           display: flex;
           align-items: center;
-          gap: 0.5rem;
+          justify-content: center;
           padding: 0.5rem;
-          background: rgba(100, 150, 255, 0.2);
-          border: 1px solid rgba(100, 150, 255, 0.4);
-          border-radius: 8px;
           cursor: grab;
-          transition: all 0.3s ease;
+          border-radius: 6px;
+          transition: all 0.2s ease;
+          flex-shrink: 0;
+          user-select: none;
+          -webkit-user-select: none;
+          -moz-user-select: none;
+          -ms-user-select: none;
         }
 
-        .dragged-game:hover {
-          background: rgba(100, 150, 255, 0.3);
-        }
-
-        .dragged-game:active {
+        .drag-handle:active {
           cursor: grabbing;
         }
 
-        .empty-slot {
-          color: rgba(255, 255, 255, 0.4);
-          font-style: italic;
-          text-align: center;
-          padding: 1rem;
-          border: 2px dashed rgba(255, 255, 255, 0.2);
-          border-radius: 8px;
+        .drag-dots {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 2px;
+          width: 12px;
+          height: 18px;
         }
 
-        .available-games {
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 12px;
-          padding: 1rem;
+        .dot {
+          width: 2px;
+          height: 2px;
+          background: rgba(255, 255, 255, 0.6);
+          border-radius: 50%;
         }
 
-        .available-games h3 {
-          color: white;
-          font-size: 1.1rem;
-          font-weight: 600;
-          margin: 0 0 1rem 0;
+        .drag-handle:hover .dot {
+          background: rgba(255, 255, 255, 0.8);
         }
 
-        .games-list {
-          display: flex;
-          flex-direction: column;
-          gap: 0.5rem;
-        }
+        /* Mobile responsive for drag drop */
+        @media (max-width: 768px) {
+          .drag-drop-games-list * {
+            -webkit-tap-highlight-color: transparent !important;
+            -webkit-touch-callout: none !important;
+            -webkit-user-select: none !important;
+            user-select: none !important;
+          }
 
-        .available-game {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          padding: 0.75rem;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 8px;
-          cursor: grab;
-          transition: all 0.3s ease;
-        }
+          .drag-drop-games-list *:active {
+            background: inherit !important;
+          }
+          .drag-drop-game-container {
+            flex-direction: row;
+            gap: 0.15rem;
+            align-items: center;
+            padding: 0.1rem;
+            background: none;
+            border: none;
+            border-radius: 0;
+            margin-bottom: 0.5rem;
+            height: 100px;
+            min-height: 100px;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+          }
 
-        .available-game:hover {
-          background: rgba(255, 255, 255, 0.1);
-        }
+          .drag-drop-game-container:active {
+            background: none !important;
+          }
 
-        .available-game:active {
-          cursor: grabbing;
-        }
+          .drag-drop-game-row {
+            padding: 0.15rem;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.02) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            box-shadow: none;
+            min-height: 100px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            outline: none !important;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateY(0);
+          }
 
-        .team-logo-tiny {
-          width: 20px;
-          height: 20px;
-          object-fit: contain;
-        }
+          .drag-drop-game-row:active,
+          .drag-drop-game-row:focus,
+          .drag-drop-game-row:focus-visible,
+          .drag-drop-game-row:focus-within {
+            background: rgba(255, 255, 255, 0.02) !important;
+            outline: none !important;
+          }
 
-        .game-text {
-          color: white;
-          font-weight: 500;
-          font-size: 0.9rem;
-        }
+          .drag-drop-game-row-main {
+            flex-direction: row;
+            gap: 0.15rem;
+            align-items: center;
+            width: 100%;
+            justify-content: space-between;
+            height: 100%;
+          }
 
-        .game-time-small {
-          color: rgba(255, 255, 255, 0.6);
-          font-size: 0.8rem;
-          margin-left: auto;
+          /* Mobile team info sections */
+          .team-info-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.15rem;
+            flex: 1;
+            min-width: 0;
+            padding: 0.15rem 0;
+            height: 100%;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+          }
+
+          .team-info-section:active {
+            background: none !important;
+          }
+
+          .team-logo-section.mobile-logo {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 0.125rem;
+          }
+
+          .team-logo-section.mobile-logo img {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+          }
+
+          .team-name-small {
+            font-size: 0.6rem;
+            text-align: center;
+            line-height: 1.1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0.1rem;
+          }
+
+          .team-record-small {
+            font-size: 0.6rem;
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 0.125rem;
+          }
+
+          .team-location-small {
+            font-size: 0.5rem;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 500;
+          }
+
+          .vs-divider {
+            font-size: 0.8rem;
+            padding: 0 0.25rem;
+            flex-shrink: 0;
+          }
+
+          .drag-drop-games-list .point-value-label-external {
+            align-self: center;
+            margin: 0 0 0 0.5rem !important;
+            height: auto !important;
+            width: 30px !important;
+            min-width: 30px !important;
+            max-width: 30px !important;
+            min-height: auto !important;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+            order: 1;
+            padding: 0 !important;
+            border: none !important;
+            border-radius: 0;
+            background: none !important;
+            box-shadow: none !important;
+            color: rgba(100, 150, 255, 1) !important;
+            font-weight: 700;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .drag-handle {
+            align-self: center;
+            min-height: 50px;
+            min-width: 50px;
+          }
+
+          .mobile-drag-handle {
+            min-height: 50px;
+            padding: 0.25rem;
+            width: auto;
+          }
+
+          .mobile-controls {
+            width: 100%;
+            max-width: 45px;
+          }
+
+          .mobile-arrow-btn {
+            min-width: 30px;
+            min-height: 30px;
+            font-size: 0.9rem;
+            padding: 0.3rem;
+          }
+
+          /* Remove touch dragging styles */
+          .drag-drop-game-row.touch-dragging {
+            opacity: 1;
+            transform: none;
+            box-shadow: none;
+            z-index: auto;
+            position: static;
+          }
         }
 
         /* Submit Section */
@@ -2140,8 +2846,8 @@ function MakePicks() {
           }
 
           .team-logo-large {
-            width: 20px;
-            height: 20px;
+            width: 30px;
+            height: 30px;
           }
 
           .radio-section {

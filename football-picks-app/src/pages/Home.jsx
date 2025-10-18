@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Trophy, Calendar, TrendingUp } from 'lucide-react';
+import { Trophy, Calendar, TrendingUp, BarChart3, HelpCircle, QrCode, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { statsAPI } from '../services/api';
 
@@ -10,10 +10,19 @@ function Home() {
   const [overallStandings, setOverallStandings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentWeek, setCurrentWeek] = useState(null);
+  const [showHowToPlay, setShowHowToPlay] = useState(false);
+  const [showInstallApp, setShowInstallApp] = useState(false);
 
   useEffect(() => {
     loadHomeData();
   }, []);
+
+  // Helper function to format decimal numbers
+  const formatNumber = (num) => {
+    if (num === null || num === undefined) return '0';
+    const numValue = parseFloat(num);
+    return numValue % 1 === 0 ? numValue.toString() : numValue.toFixed(1);
+  };
 
   const loadHomeData = async () => {
     try {
@@ -53,7 +62,7 @@ function Home() {
       <div className="welcome-section glass-container">
         <h1>Welcome back, {user?.nickname || user?.realName}!</h1>
         <p>Ready to make your picks for this week?</p>
-        <Link to="/make-picks" className="glass-button primary">
+        <Link to="/make-picks" className="auto-pick-button">
           Enter Your Picks
         </Link>
       </div>
@@ -88,7 +97,7 @@ function Home() {
                     >
                       <td>{index + 1}</td>
                       <td>{player.nickname}</td>
-                      <td>{player.score} ({player.numright})</td>
+                      <td>{formatNumber(player.score)} ({formatNumber(player.numright)})</td>
                     </tr>
                   ))}
                 </tbody>
@@ -133,7 +142,7 @@ function Home() {
                     >
                       <td>{index + 1}</td>
                       <td>{player.nickname}</td>
-                      <td>{player.score} ({player.numright})</td>
+                      <td>{formatNumber(player.score)} ({formatNumber(player.numright)})</td>
                     </tr>
                   ))}
                 </tbody>
@@ -153,16 +162,139 @@ function Home() {
       <div className="quick-actions glass-container">
         <h2>Quick Actions</h2>
         <div className="action-buttons">
-          <Link to="/make-picks" className="glass-button primary">
+          <Link to="/make-picks" className="auto-pick-button">
             <TrendingUp size={20} />
             Make Picks
           </Link>
           <Link to="/team-stats" className="glass-button secondary">
-            <Trophy size={20} />
+            <BarChart3 size={20} />
             Team Stats
           </Link>
+          <button 
+            className="glass-button secondary" 
+            onClick={() => setShowHowToPlay(true)}
+          >
+            <HelpCircle size={20} />
+            How to Play
+          </button>
+          <button 
+            className="glass-button secondary" 
+            onClick={() => setShowInstallApp(true)}
+          >
+            <QrCode size={20} />
+            Install App
+          </button>
         </div>
       </div>
+
+      {/* How to Play Popup */}
+      {showHowToPlay && (
+        <div className="popup-overlay" onClick={() => setShowHowToPlay(false)}>
+          <div className="popup-content glass-container" onClick={(e) => e.stopPropagation()}>
+            <div className="popup-header">
+              <h2>How to Play</h2>
+              <button 
+                className="popup-close" 
+                onClick={() => setShowHowToPlay(false)}
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="popup-body">
+              <div className="instruction-section">
+                <h3 className="checkbox-heading">
+                  <span className="checkbox-icon">☑</span>
+                  <span className="checkbox-text">Making Your Picks</span>
+                </h3>
+                <p>Each week, you'll pick the winners of NFL games and assign point values to each pick.</p>
+                <ul>
+                  <li><strong>Higher point values</strong> = More confidence in your pick</li>
+                  <li><strong>Lower point values</strong> = Less confidence</li>
+                  <li>You can only use each point value once per week</li>
+                  <li>Use the "Auto Pick Highest Points" feature to automatically assign the highest available points</li>
+                  <li><strong>Deadline:</strong> Picks are due before the first game of the week, which is typically Thursday night</li>
+                </ul>
+              </div>
+              
+              <div className="instruction-section">
+                <h3>🏅 Scoring System</h3>
+                <p>Your score is calculated based on your correct picks and their point values:</p>
+                <ul>
+                  <li><strong>Correct pick</strong> = You earn the points you assigned</li>
+                  <li><strong>Wrong pick</strong> = You lose the points you assigned</li>
+                  <li>Your total score is the sum of all your point values for correct picks</li>
+                </ul>
+              </div>
+
+              <div className="instruction-section">
+                <h3>🏆 Competition</h3>
+                <p>Compete with other players to see who can make the best predictions:</p>
+                <ul>
+                  <li>Check <strong>Weekly Standings</strong> to see how you rank this week</li>
+                  <li>Check <strong>Overall Standings</strong> to see your season-long performance</li>
+                  <li>View <strong>Team Stats</strong> to see which teams are most/least picked</li>
+                </ul>
+              </div>
+
+              <div className="instruction-section">
+                <h3>💡 Pro Tips</h3>
+                <ul>
+                  <li>Pick early - don't wait until the last minute</li>
+                  <li>Consider the point spread when making your picks</li>
+                  <li>Check the standings regularly to see how you're doing</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Install App Popup */}
+      {showInstallApp && (
+        <div className="popup-overlay" onClick={() => setShowInstallApp(false)}>
+          <div className="popup-content glass-container" onClick={(e) => e.stopPropagation()}>
+            <div className="popup-header">
+              <h2>Install Football Picks App</h2>
+              <button 
+                className="popup-close" 
+                onClick={() => setShowInstallApp(false)}
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="popup-body">
+              <div className="instruction-section">
+                <h3 className="platform-heading">
+                  <img src="/images/apple.svg" alt="Apple" className="platform-icon" />
+                  <span>For iPhone (iOS)</span>
+                </h3>
+                <ol>
+                  <li>Open this website in <strong>Safari</strong> (not Chrome)</li>
+                  <li>Tap the <strong>three dots menu</strong> in the bottom right</li>
+                  <li>Tap the <strong>Share</strong> button</li>
+                  <li>Scroll down and tap <strong>"Add to Home Screen"</strong></li>
+                  <li>Tap <strong>"Add"</strong> to confirm</li>
+                  <li>The app icon will appear on your home screen!</li>
+                </ol>
+              </div>
+              
+              <div className="instruction-section">
+                <h3 className="platform-heading">
+                  <img src="/images/android.svg" alt="Android" className="platform-icon" />
+                  <span>For Android</span>
+                </h3>
+                <ol>
+                  <li>Open this website in <strong>Chrome</strong></li>
+                  <li>Tap the <strong>three dots menu</strong> in the top right</li>
+                  <li>Tap <strong>"Add to Home screen"</strong> or <strong>"Install app"</strong></li>
+                  <li>Tap <strong>"Add"</strong> or <strong>"Install"</strong> to confirm</li>
+                  <li>The app icon will appear on your home screen!</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx="true">{`
         .home-container {
@@ -248,6 +380,24 @@ function Home() {
           letter-spacing: 0.5px;
         }
 
+        .glass-table th:first-child {
+          border-top-left-radius: 16px;
+        }
+
+        .glass-table th:last-child {
+          border-top-right-radius: 16px;
+        }
+
+        .glass-table th,
+        .glass-table td {
+          border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .glass-table th:last-child,
+        .glass-table td:last-child {
+          border-right: none;
+        }
+
         .view-all-link {
           margin-top: 1rem;
           text-align: center;
@@ -284,6 +434,232 @@ function Home() {
           gap: 0.5rem;
           min-width: 150px;
         }
+
+        .auto-pick-button {
+          background: linear-gradient(135deg, rgba(100, 150, 255, 0.3), rgba(150, 200, 255, 0.2));
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(100, 150, 255, 0.4);
+          border-radius: 12px;
+          padding: 1rem 2rem;
+          color: white;
+          font-size: 1rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          text-decoration: none;
+          display: inline-block;
+          text-align: center;
+          box-shadow: 
+            0 4px 16px rgba(100, 150, 255, 0.2),
+            0 0 20px rgba(100, 150, 255, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .auto-pick-button:hover {
+          background: linear-gradient(135deg, rgba(100, 150, 255, 0.4), rgba(150, 200, 255, 0.3));
+          border-color: rgba(100, 150, 255, 0.6);
+          color: white;
+          transform: translateY(-2px);
+          box-shadow: 
+            0 8px 25px rgba(100, 150, 255, 0.4),
+            0 0 30px rgba(100, 150, 255, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+
+        .action-buttons .auto-pick-button {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          min-width: 150px;
+        }
+
+        /* Popup Styles */
+        .popup-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.3);
+          backdrop-filter: blur(10px);
+          z-index: 1000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 1rem;
+        }
+
+        .popup-content {
+          max-width: 600px;
+          width: 100%;
+          max-height: 80vh;
+          overflow-y: auto;
+          overflow-x: hidden;
+          position: relative;
+          background: rgba(255, 255, 255, 0.08);
+          backdrop-filter: blur(15px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 20px;
+          padding: 2rem;
+          box-shadow: 
+            0 8px 32px rgba(0, 0, 0, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+          transition: all 0.3s ease;
+        }
+
+        .popup-content:hover {
+          transform: translateY(-2px);
+          box-shadow: 
+            0 12px 40px rgba(0, 0, 0, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+
+        /* Custom scrollbar for popup */
+        .popup-content::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .popup-content::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 4px;
+          margin: 20px 0;
+        }
+
+        .popup-content::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 4px;
+          transition: all 0.2s ease;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .popup-content::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.3);
+        }
+
+        .popup-content::-webkit-scrollbar-corner {
+          background: transparent;
+        }
+
+        .popup-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1.5rem;
+          padding-bottom: 1rem;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .popup-header h2 {
+          margin: 0;
+          color: white;
+          font-size: 1.5rem;
+          font-weight: 600;
+        }
+
+        .popup-close {
+          background: rgba(255, 255, 255, 0.08);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          color: rgba(255, 255, 255, 0.7);
+          cursor: pointer;
+          padding: 0.5rem;
+          border-radius: 12px;
+          transition: all 0.3s ease;
+          box-shadow: 
+            0 4px 16px rgba(0, 0, 0, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 40px;
+          height: 40px;
+        }
+
+        .popup-close:hover {
+          background: rgba(255, 255, 255, 0.12);
+          border-color: rgba(255, 255, 255, 0.25);
+          color: white;
+          box-shadow: 
+            0 6px 20px rgba(0, 0, 0, 0.15),
+            inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+
+        .popup-body {
+          color: rgba(255, 255, 255, 0.9);
+          line-height: 1.6;
+        }
+
+        .instruction-section {
+          margin-bottom: 2rem;
+        }
+
+        .instruction-section h3 {
+          color: white;
+          font-size: 1.2rem;
+          font-weight: 600;
+          margin-bottom: 0.75rem;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .instruction-section h3 {
+          filter: grayscale(100%) brightness(0) invert(1);
+        }
+
+        .instruction-section h3:has-text("🏅") {
+          filter: none;
+        }
+
+        .checkbox-heading {
+          filter: none;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .checkbox-icon {
+          font-size: 1.8rem !important;
+        }
+
+        .checkbox-text {
+          font-size: 1.2rem;
+          font-weight: 600;
+        }
+
+        .platform-heading {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .platform-icon {
+          width: 24px;
+          height: 24px;
+          filter: brightness(0) invert(1);
+        }
+
+        .instruction-section p {
+          margin-bottom: 1rem;
+          color: rgba(255, 255, 255, 0.8);
+        }
+
+        .instruction-section ul,
+        .instruction-section ol {
+          margin-left: 1.5rem;
+          margin-bottom: 1rem;
+        }
+
+        .instruction-section li {
+          margin-bottom: 0.5rem;
+          color: rgba(255, 255, 255, 0.8);
+        }
+
+        .instruction-section strong {
+          color: rgba(150, 200, 255, 1);
+          font-weight: 600;
+        }
+
 
         @media (max-width: 768px) {
           .welcome-section h1 {

@@ -72,6 +72,33 @@ app.get('/api/check-session', async (req, res) => {
   }
 });
 
+// Get user tags
+app.get('/api/user-tags', requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    
+    const result = await pool.query(`
+      SELECT t.id, t.name 
+      FROM tags t, pickertags p 
+      WHERE p.pickerid = $1 AND p.tagid = t.id 
+      ORDER BY t.name
+    `, [userId]);
+    
+    const tags = result.rows.map(tag => ({
+      id: tag.id,
+      name: tag.name
+    }));
+    
+    // Always include "All" option
+    tags.unshift({ id: 0, name: 'All' });
+    
+    res.json({ success: true, tags });
+  } catch (error) {
+    console.error('Get user tags error:', error);
+    res.json({ success: false, error: 'Database error' });
+  }
+});
+
 // Login
 app.post('/api/login', async (req, res) => {
   try {
@@ -333,6 +360,13 @@ app.post('/api/picks/:weekId', requireAuth, async (req, res) => {
 app.get('/api/overall-standings', requireAuth, async (req, res) => {
   try {
     const currentYear = new Date().getFullYear();
+    const tag = req.query.tag || 0;
+    
+    let tagFilter = '';
+    if (tag != 0) {
+      tagFilter = ' AND u.id IN (SELECT pickerid FROM pickertags WHERE tagid = $2)';
+    }
+    
     const result = await pool.query(`
       SELECT u.id, u.nickname, 
              COALESCE(SUM(s.score), 0) as score,
@@ -341,10 +375,10 @@ app.get('/api/overall-standings', requireAuth, async (req, res) => {
       FROM pickers u
       LEFT JOIN scores s ON u.id = s.picker
       LEFT JOIN weeks w ON s.week = w.id
-      WHERE u.active = 'y' AND (w.year = $1 OR w.year IS NULL)
+      WHERE u.active = 'y' AND (w.year = $1 OR w.year IS NULL)${tagFilter}
       GROUP BY u.id, u.nickname
       ORDER BY score DESC, numright DESC
-    `, [currentYear]);
+    `, tag != 0 ? [currentYear, tag] : [currentYear]);
     
     res.json({ success: true, standings: result.rows });
   } catch (error) {
@@ -356,14 +390,21 @@ app.get('/api/overall-standings', requireAuth, async (req, res) => {
 // Get overall standings with weekly breakdown
 app.get('/api/overall-standings-detailed', requireAuth, async (req, res) => {
   try {
-    // Get all weeks for the current year that have started
     const currentYear = new Date().getFullYear();
+    const tag = req.query.tag || 0;
+    
+    // Get all weeks for the current year that have started
     const weeksResult = await pool.query(`
       SELECT id, number 
       FROM weeks 
       WHERE year = $1 AND startdate < NOW()
       ORDER BY number DESC
     `, [currentYear]);
+    
+    let tagFilter = '';
+    if (tag != 0) {
+      tagFilter = ' AND u.id IN (SELECT pickerid FROM pickertags WHERE tagid = $2)';
+    }
     
     // Get all users with their weekly scores (only from current year)
     const standingsResult = await pool.query(`
@@ -374,10 +415,10 @@ app.get('/api/overall-standings-detailed', requireAuth, async (req, res) => {
       FROM pickers u
       LEFT JOIN scores s ON u.id = s.picker
       LEFT JOIN weeks w ON s.week = w.id
-      WHERE u.active = 'y' AND (w.year = $1 OR w.year IS NULL)
+      WHERE u.active = 'y' AND (w.year = $1 OR w.year IS NULL)${tagFilter}
       GROUP BY u.id, u.nickname
       ORDER BY total_score DESC, total_correct DESC
-    `, [currentYear]);
+    `, tag != 0 ? [currentYear, tag] : [currentYear]);
     
     // Get weekly scores for each user (only from current year)
     const weeklyScores = {};
@@ -415,14 +456,20 @@ app.get('/api/overall-standings-detailed', requireAuth, async (req, res) => {
 app.get('/api/weekly-standings/:weekId', requireAuth, async (req, res) => {
   try {
     const { weekId } = req.params;
+    const tag = req.query.tag || 0;
+    
+    let tagFilter = '';
+    if (tag != 0) {
+      tagFilter = ' AND u.id IN (SELECT pickerid FROM pickertags WHERE tagid = $2)';
+    }
     
     const result = await pool.query(`
       SELECT u.id, u.nickname, s.score, s.numright
       FROM pickers u
       JOIN scores s ON u.id = s.picker
-      WHERE s.week = $1 AND u.active = 'y'
+      WHERE s.week = $1 AND u.active = 'y'${tagFilter}
       ORDER BY s.score DESC, s.numright DESC
-    `, [weekId]);
+    `, tag != 0 ? [weekId, tag] : [weekId]);
     
     res.json({ success: true, standings: result.rows });
   } catch (error) {
@@ -435,6 +482,7 @@ app.get('/api/weekly-standings/:weekId', requireAuth, async (req, res) => {
 app.get('/api/weekly-standings-detailed/:weekId', requireAuth, async (req, res) => {
   try {
     const { weekId } = req.params;
+    const tag = req.query.tag || 0;
     
     // Get the week info
     const weekResult = await pool.query(`
@@ -449,6 +497,11 @@ app.get('/api/weekly-standings-detailed/:weekId', requireAuth, async (req, res) 
     
     const week = weekResult.rows[0];
     
+    let tagFilter = '';
+    if (tag != 0) {
+      tagFilter = ' AND u.id IN (SELECT pickerid FROM pickertags WHERE tagid = $2)';
+    }
+    
     // Get standings for this week with potential scores
     const standingsResult = await pool.query(`
       SELECT u.id, u.nickname, s.score, s.numright, 
@@ -456,9 +509,9 @@ app.get('/api/weekly-standings-detailed/:weekId', requireAuth, async (req, res) 
              s.numright + COALESCE(s.potright, 0) as potential_correct
       FROM pickers u
       JOIN scores s ON u.id = s.picker
-      WHERE s.week = $1 AND u.active = 'y'
+      WHERE s.week = $1 AND u.active = 'y'${tagFilter}
       ORDER BY potential_score DESC, potential_correct DESC
-    `, [weekId]);
+    `, tag != 0 ? [weekId, tag] : [weekId]);
     
     // Get all picks for this week to calculate incorrect
     const picksResult = await pool.query(`
@@ -495,6 +548,7 @@ app.get('/api/weekly-standings-detailed/:weekId', requireAuth, async (req, res) 
 app.get('/api/weekly-standings-classic/:weekId', requireAuth, async (req, res) => {
   try {
     const { weekId } = req.params;
+    const tag = req.query.tag || 0;
     
     // Get the week info
     const weekResult = await pool.query(`
@@ -521,14 +575,19 @@ app.get('/api/weekly-standings-classic/:weekId', requireAuth, async (req, res) =
       ORDER BY g.date, a.abbr
     `, [weekId]);
     
+    let tagFilter = '';
+    if (tag != 0) {
+      tagFilter = ' AND u.id IN (SELECT pickerid FROM pickertags WHERE tagid = $2)';
+    }
+    
     // Get all standings for this week
     const standingsResult = await pool.query(`
       SELECT u.id, u.nickname, s.score, s.numright
       FROM pickers u
       JOIN scores s ON u.id = s.picker
-      WHERE s.week = $1 AND u.active = 'y'
+      WHERE s.week = $1 AND u.active = 'y'${tagFilter}
       ORDER BY s.score DESC, s.numright DESC
-    `, [weekId]);
+    `, tag != 0 ? [weekId, tag] : [weekId]);
     
     // Get all picks for this week
     const picksResult = await pool.query(`

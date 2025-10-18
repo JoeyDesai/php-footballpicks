@@ -29,7 +29,10 @@ export const authAPI = {
     }),
   
   checkSession: () => 
-    api.get('/api/check-session')
+    api.get('/api/check-session'),
+  
+  getUserTags: () => 
+    api.get('/api/user-tags')
 };
 
 export const gameAPI = {
@@ -50,17 +53,17 @@ export const statsAPI = {
   getWeeklyStandings: (weekId, tag = 0) => 
     api.get(`/api/weekly-standings/${weekId}?tag=${tag}`),
   
-  getWeeklyStandingsDetailed: (weekId) => 
-    api.get(`/api/weekly-standings-detailed/${weekId}`),
+  getWeeklyStandingsDetailed: (weekId, tag = 0) => 
+    api.get(`/api/weekly-standings-detailed/${weekId}?tag=${tag}`),
   
-  getWeeklyStandingsClassic: (weekId) => 
-    api.get(`/api/weekly-standings-classic/${weekId}`),
+  getWeeklyStandingsClassic: (weekId, tag = 0) => 
+    api.get(`/api/weekly-standings-classic/${weekId}?tag=${tag}`),
   
   getOverallStandings: (tag = 0) => 
     api.get(`/api/overall-standings?tag=${tag}`),
   
-  getOverallStandingsDetailed: () => 
-    api.get('/api/overall-standings-detailed'),
+  getOverallStandingsDetailed: (tag = 0) => 
+    api.get(`/api/overall-standings-detailed?tag=${tag}`),
   
   getTeamStats: () => 
     api.get('/api/team-stats'),

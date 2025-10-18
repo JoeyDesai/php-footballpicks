@@ -33,7 +33,6 @@ function Header() {
         <nav className="desktop-nav">
           <Link to="/weekly-standings" className="nav-link">Weekly Standings</Link>
           <Link to="/overall-standings" className="nav-link">Overall Standings</Link>
-          <Link to="/team-stats" className="nav-link">Team Stats</Link>
           <button onClick={handleLogout} className="nav-link logout-btn">Logout</button>
         </nav>
 
@@ -43,31 +42,28 @@ function Header() {
         </button>
 
         {/* Call to Action Button */}
-        <Link to="/make-picks" className="cta-button">
+        <Link to="/make-picks" className="auto-pick-button">
           Enter Your Picks
         </Link>
       </div>
 
-      {/* Mobile Navigation */}
-      {isMenuOpen && (
-        <nav className="mobile-nav">
-          <Link to="/weekly-standings" className="mobile-nav-link" onClick={closeMenu}>
-            Weekly Standings
-          </Link>
-          <Link to="/overall-standings" className="mobile-nav-link" onClick={closeMenu}>
-            Overall Standings
-          </Link>
-          <Link to="/team-stats" className="mobile-nav-link" onClick={closeMenu}>
-            Team Stats
-          </Link>
-          <Link to="/make-picks" className="mobile-nav-link" onClick={closeMenu}>
-            Enter Your Picks
-          </Link>
-          <button onClick={handleLogout} className="mobile-nav-link logout-btn">
-            Logout
-          </button>
-        </nav>
-      )}
+        {/* Mobile Navigation */}
+        {isMenuOpen && (
+          <nav className="mobile-nav">
+            <Link to="/weekly-standings" className="mobile-nav-link" onClick={closeMenu}>
+              Weekly Standings
+            </Link>
+            <Link to="/overall-standings" className="mobile-nav-link" onClick={closeMenu}>
+              Overall Standings
+            </Link>
+            <Link to="/make-picks" className="auto-pick-button mobile-nav-link" onClick={closeMenu}>
+              Enter Your Picks
+            </Link>
+            <button onClick={handleLogout} className="mobile-nav-link logout-btn">
+              Logout
+            </button>
+          </nav>
+        )}
 
       <style jsx="true">{`
         .header {
@@ -165,34 +161,39 @@ function Header() {
           }
         }
 
-        .cta-button {
+        .auto-pick-button {
           display: none;
           background: linear-gradient(135deg, rgba(100, 150, 255, 0.3), rgba(150, 200, 255, 0.2));
-          backdrop-filter: blur(10px);
-          border: 1px solid rgba(255, 255, 255, 0.3);
-          border-radius: 12px;
-          padding: 0.6rem 1rem;
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(100, 150, 255, 0.4);
           color: white;
-          text-decoration: none;
-          font-weight: 500;
-          font-size: 0.9rem;
+          padding: 0.6rem 1rem;
+          border-radius: 12px;
+          cursor: pointer;
           transition: all 0.3s ease;
+          font-size: 0.9rem;
+          font-weight: 600;
+          text-decoration: none;
           box-shadow: 
-            0 4px 16px rgba(0, 0, 0, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            0 4px 16px rgba(100, 150, 255, 0.2),
+            0 0 20px rgba(100, 150, 255, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
 
-        .cta-button:hover {
-          transform: translateY(-2px);
+        .auto-pick-button:hover {
           background: linear-gradient(135deg, rgba(100, 150, 255, 0.4), rgba(150, 200, 255, 0.3));
+          border-color: rgba(100, 150, 255, 0.6);
+          color: white;
+          transform: translateY(-2px);
           box-shadow: 
-            0 8px 25px rgba(100, 150, 255, 0.3),
+            0 8px 25px rgba(100, 150, 255, 0.4),
+            0 0 30px rgba(100, 150, 255, 0.2),
             inset 0 1px 0 rgba(255, 255, 255, 0.3);
         }
 
         @media (min-width: 1024px) {
-          .cta-button {
-            display: block;
+          .auto-pick-button {
+            display: inline-block;
           }
         }
 
@@ -229,6 +230,31 @@ function Header() {
         .mobile-nav-link:hover {
           background: rgba(255, 255, 255, 0.1);
           color: rgba(150, 200, 255, 1);
+        }
+
+        .mobile-nav-link.auto-pick-button {
+          background: linear-gradient(135deg, rgba(100, 150, 255, 0.3), rgba(150, 200, 255, 0.2));
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(100, 150, 255, 0.4);
+          color: white;
+          font-weight: 600;
+          text-align: center;
+          margin: 0.5rem 0;
+          box-shadow: 
+            0 4px 16px rgba(100, 150, 255, 0.2),
+            0 0 20px rgba(100, 150, 255, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .mobile-nav-link.auto-pick-button:hover {
+          background: linear-gradient(135deg, rgba(100, 150, 255, 0.4), rgba(150, 200, 255, 0.3));
+          border-color: rgba(100, 150, 255, 0.6);
+          color: white;
+          transform: translateY(-2px);
+          box-shadow: 
+            0 8px 25px rgba(100, 150, 255, 0.4),
+            0 0 30px rgba(100, 150, 255, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
         }
       `}</style>
     </header>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Trophy, Filter, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { statsAPI } from '../services/api';
+import { statsAPI, authAPI } from '../services/api';
 import CustomDropdown from '../components/CustomDropdown';
 
 // Utility function to format numbers - remove .0 but keep other decimals
@@ -20,10 +20,8 @@ function OverallStandings() {
   const [selectedTag, setSelectedTag] = useState(0);
   const [viewMode, setViewMode] = useState('condensed'); // 'condensed' or 'classic'
   const [selectedRow, setSelectedRow] = useState(null);
-  const [availableTags] = useState([
-    { id: 0, name: 'All' },
-    { id: 1, name: 'Family' },
-    { id: 2, name: 'Extended Family' }
+  const [availableTags, setAvailableTags] = useState([
+    { id: 0, name: 'All' }
   ]);
 
   // Sync horizontal scrolling between header and body
@@ -42,8 +40,23 @@ function OverallStandings() {
   };
 
   useEffect(() => {
+    loadUserTags();
+  }, []);
+
+  useEffect(() => {
     loadStandings();
   }, [selectedTag, viewMode]);
+
+  const loadUserTags = async () => {
+    try {
+      const response = await authAPI.getUserTags();
+      if (response.data.success) {
+        setAvailableTags(response.data.tags);
+      }
+    } catch (error) {
+      console.error('Error loading user tags:', error);
+    }
+  };
 
   const loadStandings = async () => {
     try {
