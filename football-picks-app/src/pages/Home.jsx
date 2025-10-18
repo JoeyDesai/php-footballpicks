@@ -164,7 +164,7 @@ function Home() {
         </div>
       </div>
 
-      <style jsx>{`
+      <style jsx="true">{`
         .home-container {
           max-width: 1200px;
           margin: 0 auto;

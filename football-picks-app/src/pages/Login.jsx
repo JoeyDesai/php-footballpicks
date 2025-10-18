@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Target, Mail, Lock, AlertCircle } from 'lucide-react';
+import { Mail, Lock, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 function Login() {
@@ -38,7 +38,6 @@ function Login() {
     <div className="login-container">
       <div className="login-card glass-container">
         <div className="login-header">
-          <Target className="login-icon" />
           <h1>Football Picks</h1>
           <p>Sign in to your account</p>
         </div>
@@ -102,7 +101,7 @@ function Login() {
         </div>
       </div>
 
-      <style jsx>{`
+      <style jsx="true">{`
         .login-container {
           min-height: 100vh;
           display: flex;
@@ -121,12 +120,6 @@ function Login() {
           margin-bottom: 2rem;
         }
 
-        .login-icon {
-          color: rgba(100, 150, 255, 1);
-          margin-bottom: 1rem;
-          width: 48px;
-          height: 48px;
-        }
 
         .login-header h1 {
           font-size: 2rem;

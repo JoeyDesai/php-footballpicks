@@ -1,12 +1,69 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
 import { statsAPI } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 function TeamStats() {
+  const { user } = useAuth();
   const [teamStats, setTeamStats] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState('totalPoints');
+  const [error, setError] = useState(null);
+  const [sortBy, setSortBy] = useState('pointswon');
   const [sortOrder, setSortOrder] = useState('desc');
+
+  const handleBodyScroll = (e) => {
+    const headerContainer = document.querySelector('.table-header-container');
+    if (headerContainer) {
+      headerContainer.scrollLeft = e.target.scrollLeft;
+    }
+  };
+
+  const handleHeaderScroll = (e) => {
+    const tableBody = document.querySelector('.table-body');
+    if (tableBody) {
+      tableBody.scrollLeft = e.target.scrollLeft;
+    }
+  };
+
+
+  // Helper function to map team names to image file names
+  const getTeamImageName = (teamName) => {
+    const teamMap = {
+      '49ers': '49ers',
+      'Bears': 'bears',
+      'Bengals': 'bengals',
+      'Bills': 'bills',
+      'Broncos': 'broncos',
+      'Browns': 'browns',
+      'Buccaneers': 'buccaneers',
+      'Cardinals': 'cardinals',
+      'Chargers': 'chargers',
+      'Chiefs': 'chiefs',
+      'Colts': 'colts',
+      'Commanders': 'commanders',
+      'Cowboys': 'cowboys',
+      'Dolphins': 'dolphins',
+      'Eagles': 'eagles',
+      'Falcons': 'falcons',
+      'Giants': 'giants',
+      'Jaguars': 'jaguars',
+      'Jets': 'jets',
+      'Lions': 'lions',
+      'Packers': 'packers',
+      'Panthers': 'panthers',
+      'Patriots': 'patriots',
+      'Raiders': 'raiders',
+      'Rams': 'rams',
+      'Ravens': 'ravens',
+      'Saints': 'saints',
+      'Seahawks': 'seahawks',
+      'Steelers': 'steelers',
+      'Texans': 'texans',
+      'Titans': 'titans',
+      'Vikings': 'vikings'
+    };
+    return teamMap[teamName] || teamName.toLowerCase();
+  };
 
   useEffect(() => {
     loadTeamStats();
@@ -15,12 +72,20 @@ function TeamStats() {
   const loadTeamStats = async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await statsAPI.getTeamStats();
       if (response.data.success) {
+        console.log('Team stats data:', response.data.stats);
+        if (response.data.stats.length > 0) {
+          console.log('First team data:', response.data.stats[0]);
+        }
         setTeamStats(response.data.stats);
+      } else {
+        setError('API returned success: false');
       }
     } catch (error) {
       console.error('Error loading team stats:', error);
+      setError(`API Error: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -39,27 +104,36 @@ function TeamStats() {
     let aVal = a[sortBy];
     let bVal = b[sortBy];
     
-    if (typeof aVal === 'string') {
+    // Handle string vs number sorting
+    if (sortBy === 'name') {
+      // String sorting for team names
       aVal = aVal.toLowerCase();
       bVal = bVal.toLowerCase();
+    } else {
+      // Number sorting for all numeric columns
+      aVal = parseFloat(aVal) || 0;
+      bVal = parseFloat(bVal) || 0;
     }
     
+    let result;
     if (sortOrder === 'asc') {
-      return aVal > bVal ? 1 : -1;
+      result = aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
     } else {
-      return aVal < bVal ? 1 : -1;
+      result = aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
     }
+    
+    return result;
   });
 
   const getSortIcon = (column) => {
-    if (sortBy !== column) return null;
-    return sortOrder === 'asc' ? <TrendingUp size={16} /> : <TrendingDown size={16} />;
+    return null; // We'll use CSS pseudo-element instead
   };
 
   if (loading) {
     return (
       <div className="team-stats-container">
         <div className="loading-spinner"></div>
+        <p>Loading team statistics...</p>
       </div>
     );
   }
@@ -71,95 +145,80 @@ function TeamStats() {
           <BarChart3 className="header-icon" />
           <h1>Team Statistics</h1>
         </div>
-        <p>See how teams perform based on player picks and actual results</p>
+        <p>Interesting team pick statistics based on player selections and actual results</p>
       </div>
+      
+      
 
       <div className="stats-table-container glass-container">
         {teamStats.length > 0 ? (
-          <div className="table-wrapper">
-            <table className="glass-table">
-              <thead>
-                <tr>
-                  <th 
-                    className="sortable-header"
-                    onClick={() => handleSort('name')}
-                  >
-                    Team {getSortIcon('name')}
-                  </th>
-                  <th 
-                    className="sortable-header"
-                    onClick={() => handleSort('pointsWon')}
-                  >
-                    Points Won {getSortIcon('pointsWon')}
-                  </th>
-                  <th 
-                    className="sortable-header"
-                    onClick={() => handleSort('correctPicks')}
-                  >
-                    Correctly Picked {getSortIcon('correctPicks')}
-                  </th>
-                  <th 
-                    className="sortable-header"
-                    onClick={() => handleSort('pointsLost')}
-                  >
-                    Points Lost {getSortIcon('pointsLost')}
-                  </th>
-                  <th 
-                    className="sortable-header"
-                    onClick={() => handleSort('wrongPicks')}
-                  >
-                    Wrongly Picked {getSortIcon('wrongPicks')}
-                  </th>
-                  <th 
-                    className="sortable-header"
-                    onClick={() => handleSort('totalPoints')}
-                  >
-                    Total Points {getSortIcon('totalPoints')}
-                  </th>
-                  <th 
-                    className="sortable-header"
-                    onClick={() => handleSort('totalPicks')}
-                  >
-                    Total Picks {getSortIcon('totalPicks')}
-                  </th>
-                  <th 
-                    className="sortable-header"
-                    onClick={() => handleSort('winRate')}
-                  >
-                    Win Rate {getSortIcon('winRate')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className="table-container">
+            <div className="table-header-container" onScroll={handleHeaderScroll}>
+              <div className="table-header">
+                <div className="header-cell team-header">Team</div>
+                <div 
+                  className={`header-cell data-header sortable-header ${sortBy === 'pointswon' ? 'active-sort' : ''}`}
+                  onClick={() => handleSort('pointswon')}
+                >
+                  Points Won
+                </div>
+                <div 
+                  className={`header-cell data-header sortable-header ${sortBy === 'correctpicks' ? 'active-sort' : ''}`}
+                  onClick={() => handleSort('correctpicks')}
+                >
+                  Correctly Picked
+                </div>
+                <div 
+                  className={`header-cell data-header sortable-header ${sortBy === 'pointslost' ? 'active-sort' : ''}`}
+                  onClick={() => handleSort('pointslost')}
+                >
+                  Points Lost
+                </div>
+                <div 
+                  className={`header-cell data-header sortable-header ${sortBy === 'wrongpicks' ? 'active-sort' : ''}`}
+                  onClick={() => handleSort('wrongpicks')}
+                >
+                  Wrongly Picked
+                </div>
+                <div 
+                  className={`header-cell data-header sortable-header ${sortBy === 'totalpoints' ? 'active-sort' : ''}`}
+                  onClick={() => handleSort('totalpoints')}
+                >
+                  Total Points
+                </div>
+                <div 
+                  className={`header-cell data-header sortable-header ${sortBy === 'totalpicks' ? 'active-sort' : ''}`}
+                  onClick={() => handleSort('totalpicks')}
+                >
+                  Total Times Picked
+                </div>
+              </div>
+            </div>
+            <div className="table-body-wrapper">
+              <div className="table-body" onScroll={handleBodyScroll}>
                 {sortedStats.map((team, index) => (
-                  <tr key={team.name}>
-                    <td className="team-name">
+                <div key={team.name} className="table-row">
+                  <div className="table-cell team-cell">
                       <div className="team-info">
                         <img 
-                          src={`/footballpicks/images/${team.name.toLowerCase()}.svg`}
+                          src={`/images/${getTeamImageName(team.name)}.svg`}
                           alt={team.name}
                           className="team-logo"
                           onError={(e) => e.target.style.display = 'none'}
                         />
-                        <span>{team.name}</span>
+                      <span className="team-name">{team.name}</span>
+                    </div>
+                  </div>
+                  <div className="table-cell points-won">{team.pointswon || 0}</div>
+                  <div className="table-cell correct-picks">{team.correctpicks || 0}</div>
+                  <div className="table-cell points-lost">{team.pointslost || 0}</div>
+                  <div className="table-cell wrong-picks">{team.wrongpicks || 0}</div>
+                  <div className="table-cell total-points">{team.totalpoints || 0}</div>
+                  <div className="table-cell total-picks">{team.totalpicks || 0}</div>
                       </div>
-                    </td>
-                    <td className="points-won">{team.pointsWon || 0}</td>
-                    <td className="correct-picks">{team.correctPicks || 0}</td>
-                    <td className="points-lost">{team.pointsLost || 0}</td>
-                    <td className="wrong-picks">{team.wrongPicks || 0}</td>
-                    <td className="total-points">{team.totalPoints || 0}</td>
-                    <td className="total-picks">{team.totalPicks || 0}</td>
-                    <td className="win-rate">
-                      {team.totalPicks > 0 
-                        ? `${((team.correctPicks / team.totalPicks) * 100).toFixed(1)}%`
-                        : '0.0%'
-                      }
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+              ))}
+              </div>
+            </div>
           </div>
         ) : (
           <div className="no-data">
@@ -173,23 +232,48 @@ function TeamStats() {
       {teamStats.length > 0 && (
         <div className="insights-container">
           <div className="insight-card glass-container">
-            <h3>Most Popular Team</h3>
+            <h3>Most Picked</h3>
             <div className="insight-content">
               {(() => {
-                const mostPicked = teamStats.reduce((max, team) => 
-                  (team.totalPicks || 0) > (max.totalPicks || 0) ? team : max
-                );
+                console.log('=== MOST PICKED CALCULATION DEBUG ===');
+                console.log('All team stats:', teamStats);
+                
+                const mostPicked = teamStats.length > 0 ? teamStats.reduce((max, team, index) => {
+                  const teamTotalPicks = parseFloat(team.totalpicks) || 0;
+                  const maxTotalPicks = parseFloat(max.totalpicks) || 0;
+                  
+                  console.log(`Team ${index + 1}: ${team.name}`);
+                  console.log(`  - totalpicks: ${teamTotalPicks} (type: ${typeof teamTotalPicks})`);
+                  console.log(`  - current max team: ${max.name} with ${maxTotalPicks} picks (type: ${typeof maxTotalPicks})`);
+                  console.log(`  - comparison: ${teamTotalPicks} > ${maxTotalPicks} = ${teamTotalPicks > maxTotalPicks}`);
+                  
+                  const result = teamTotalPicks > maxTotalPicks ? team : max;
+                  console.log(`  - selected: ${result.name} with ${result.totalpicks} picks`);
+                  console.log('---');
+                  
+                  return result;
+                }) : null;
+                
+                console.log('Final most picked team:', mostPicked);
+                console.log('=== END DEBUG ===');
+                
+                if (!mostPicked) {
+                  return <div className="no-data-small">No data available</div>;
+                }
+                
+                const totalPicks = mostPicked.totalpicks || 0;
+                
                 return (
                   <div className="team-highlight">
                     <img 
-                      src={`/footballpicks/images/${mostPicked.name.toLowerCase()}.svg`}
+                      src={`/images/${getTeamImageName(mostPicked.name)}.svg`}
                       alt={mostPicked.name}
                       className="highlight-logo"
                       onError={(e) => e.target.style.display = 'none'}
                     />
                     <div>
                       <div className="highlight-name">{mostPicked.name}</div>
-                      <div className="highlight-stat">{mostPicked.totalPicks} picks</div>
+                      <div className="highlight-stat">{totalPicks} total picks</div>
                     </div>
                   </div>
                 );
@@ -198,58 +282,73 @@ function TeamStats() {
           </div>
 
           <div className="insight-card glass-container">
-            <h3>Most Valuable Team</h3>
+            <h3>Biggest Heart Breaker</h3>
             <div className="insight-content">
               {(() => {
-                const mostValuable = teamStats.reduce((max, team) => 
-                  (team.totalPoints || 0) > (max.totalPoints || 0) ? team : max
-                );
-                return (
-                  <div className="team-highlight">
-                    <img 
-                      src={`/footballpicks/images/${mostValuable.name.toLowerCase()}.svg`}
-                      alt={mostValuable.name}
-                      className="highlight-logo"
-                      onError={(e) => e.target.style.display = 'none'}
-                    />
-                    <div>
-                      <div className="highlight-name">{mostValuable.name}</div>
-                      <div className="highlight-stat">{mostValuable.totalPoints} points</div>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-
-          <div className="insight-card glass-container">
-            <h3>Best Win Rate</h3>
-            <div className="insight-content">
-              {(() => {
-                const bestWinRate = teamStats
-                  .filter(team => (team.totalPicks || 0) >= 3) // Minimum 3 picks
-                  .reduce((max, team) => {
-                    const maxRate = max.totalPicks > 0 ? max.correctPicks / max.totalPicks : 0;
-                    const teamRate = team.totalPicks > 0 ? team.correctPicks / team.totalPicks : 0;
-                    return teamRate > maxRate ? team : max;
-                  });
-                
-                if (!bestWinRate.name) {
-                  return <div className="no-data-small">Not enough data</div>;
+                const biggestHeartBreaker = teamStats.length > 0 ? teamStats.reduce((max, team) => {
+                  const teamPointsLost = parseFloat(team.pointslost) || 0;
+                  const maxPointsLost = parseFloat(max.pointslost) || 0;
+                  return teamPointsLost > maxPointsLost ? team : max;
+                }) : null;
+                if (!biggestHeartBreaker) {
+                  return <div className="no-data-small">No data available</div>;
                 }
                 
                 return (
                   <div className="team-highlight">
                     <img 
-                      src={`/footballpicks/images/${bestWinRate.name.toLowerCase()}.svg`}
-                      alt={bestWinRate.name}
+                      src={`/images/${getTeamImageName(biggestHeartBreaker.name)}.svg`}
+                      alt={biggestHeartBreaker.name}
                       className="highlight-logo"
                       onError={(e) => e.target.style.display = 'none'}
                     />
                     <div>
-                      <div className="highlight-name">{bestWinRate.name}</div>
+                      <div className="highlight-name">{biggestHeartBreaker.name}</div>
+                      <div className="highlight-stat">{biggestHeartBreaker.pointslost} points lost</div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+
+          <div className="insight-card glass-container">
+            <h3>Most Dependable</h3>
+            <div className="insight-content">
+              {(() => {
+                const filteredTeams = teamStats.filter(team => {
+                  const totalPicks = (team.correctpicks || 0) + (team.wrongpicks || 0);
+                  return totalPicks >= 3;
+                });
+                const mostDependable = filteredTeams.length > 0 ? filteredTeams.reduce((max, team) => {
+                    const maxTotalPicks = (max.correctpicks || 0) + (max.wrongpicks || 0);
+                    const teamTotalPicks = (team.correctpicks || 0) + (team.wrongpicks || 0);
+                    const maxRate = maxTotalPicks > 0 ? (max.correctpicks || 0) / maxTotalPicks : 0;
+                    const teamRate = teamTotalPicks > 0 ? (team.correctpicks || 0) / teamTotalPicks : 0;
+                    return teamRate > maxRate ? team : max;
+                  }) : null;
+                
+                if (!mostDependable || !mostDependable.name) {
+                  return <div className="no-data-small">Not enough data</div>;
+                }
+                
+                const correctPicks = mostDependable.correctpicks || 0;
+                const wrongPicks = mostDependable.wrongpicks || 0;
+                const totalPicks = correctPicks + wrongPicks;
+                const correctRate = totalPicks > 0 ? correctPicks / totalPicks : 0;
+                
+                return (
+                  <div className="team-highlight">
+                    <img 
+                      src={`/images/${getTeamImageName(mostDependable.name)}.svg`}
+                      alt={mostDependable.name}
+                      className="highlight-logo"
+                      onError={(e) => e.target.style.display = 'none'}
+                    />
+                    <div>
+                      <div className="highlight-name">{mostDependable.name}</div>
                       <div className="highlight-stat">
-                        {((bestWinRate.correctPicks / bestWinRate.totalPicks) * 100).toFixed(1)}%
+                        <span style={{color: 'rgba(150, 255, 150, 1)'}}>{correctPicks}</span> : <span style={{color: 'rgba(255, 150, 150, 1)'}}>{wrongPicks}</span>
                       </div>
                     </div>
                   </div>
@@ -260,7 +359,7 @@ function TeamStats() {
         </div>
       )}
 
-      <style jsx>{`
+      <style jsx="true">{`
         .team-stats-container {
           max-width: 1400px;
           margin: 0 auto;
@@ -299,12 +398,67 @@ function TeamStats() {
         }
 
         .stats-table-container {
-          overflow-x: auto;
           margin-bottom: 2rem;
         }
 
-        .table-wrapper {
-          min-width: 1000px;
+        .table-container {
+          background: rgba(255, 255, 255, 0.05);
+          backdrop-filter: blur(15px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
+          overflow: hidden;
+          width: 100%;
+        }
+
+        .table-header-container {
+          background: rgba(255, 255, 255, 0.1);
+          backdrop-filter: blur(10px);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          overflow-x: auto;
+          width: 100%;
+          padding-right: 6px;
+          border-radius: 16px 16px 0 0;
+          margin-right: -6px;
+          box-sizing: border-box;
+        }
+
+        .table-header-container::-webkit-scrollbar {
+          width: 0px;
+          height: 0px;
+        }
+
+        .table-header-container::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .table-header-container::-webkit-scrollbar-thumb {
+          background: transparent;
+        }
+
+        .table-header-container::-webkit-scrollbar-thumb:hover {
+          background: transparent;
+        }
+
+        .table-header {
+          display: grid;
+          grid-template-columns: minmax(300px, 2fr) minmax(100px, 1fr) minmax(100px, 1fr) minmax(100px, 1fr) minmax(100px, 1fr) minmax(100px, 1fr) minmax(100px, 1fr) 6px;
+          min-width: 100%;
+          width: 100%;
+        }
+
+        .header-cell {
+          border-right: 1px solid rgba(255, 255, 255, 0.1);
+          padding: 0.4rem 0.2rem;
+          font-weight: 600;
+          color: rgba(150, 200, 255, 1);
+          text-align: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1rem;
+          white-space: normal;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
         }
 
         .sortable-header {
@@ -321,21 +475,117 @@ function TeamStats() {
           background: rgba(255, 255, 255, 0.1);
         }
 
-        .glass-table th {
-          text-align: center;
-          font-weight: 600;
-          color: rgba(150, 200, 255, 1);
-          padding: 1rem 0.5rem;
+        .sortable-header.active-sort {
+          text-decoration: underline;
+          text-decoration-color: rgba(150, 200, 255, 1);
+          text-decoration-thickness: 2px;
         }
 
-        .glass-table td {
-          text-align: center;
-          padding: 1rem 0.5rem;
-          vertical-align: middle;
+        .header-cell:last-child {
+          border-right: none;
         }
 
-        .team-name {
+        .team-header {
           text-align: left !important;
+          justify-content: flex-start !important;
+          padding: 0.4rem 0.2rem 0.4rem 0.8rem !important;
+        }
+
+        .table-body-wrapper {
+          max-height: 70vh;
+          overflow: hidden;
+          border-radius: 0 0 16px 16px;
+        }
+
+        .table-body {
+          max-height: 70vh;
+          overflow-y: auto;
+          overflow-x: auto;
+          width: 100%;
+          border-radius: 0 0 16px 16px;
+          margin-right: -6px;
+          padding-right: 6px;
+          box-sizing: border-box;
+        }
+
+        .table-body::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+        }
+
+        .table-body::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 3px;
+          margin: 0 0 0 0;
+        }
+
+        .table-body::-webkit-scrollbar-track:horizontal {
+          margin: 0 0 0 0;
+        }
+
+        .table-body::-webkit-scrollbar-thumb {
+          background: rgba(200, 200, 200, 0.4);
+          border-radius: 3px;
+          transition: all 0.3s ease;
+        }
+
+        .table-body::-webkit-scrollbar-thumb:hover {
+          background: rgba(200, 200, 200, 0.6);
+        }
+
+        .table-body::-webkit-scrollbar-corner {
+          background: transparent;
+          border-radius: 0 0 16px 0;
+          margin: 0 6px 0 0;
+        }
+
+        .table-row {
+          display: grid;
+          grid-template-columns: minmax(300px, 2fr) minmax(100px, 1fr) minmax(100px, 1fr) minmax(100px, 1fr) minmax(100px, 1fr) minmax(100px, 1fr) minmax(100px, 1fr);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          transition: background-color 0.2s ease;
+          cursor: default;
+          min-width: 100%;
+          width: 100%;
+        }
+
+        .table-row:hover {
+          background: rgba(255, 255, 255, 0.05);
+        }
+
+        .table-row:last-child {
+          border-bottom: none;
+        }
+
+        .table-cell {
+          border-right: 1px solid rgba(255, 255, 255, 0.1);
+          padding: 0.3rem 0.1rem;
+          text-align: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1rem;
+          cursor: default;
+        }
+
+        .table-cell * {
+          font-size: 1rem !important;
+          font-weight: 600 !important;
+        }
+
+        .table-cell {
+          font-size: 1rem !important;
+          font-weight: 600 !important;
+        }
+
+        .table-cell:last-child {
+          border-right: none;
+        }
+
+        .team-cell {
+          text-align: left !important;
+          justify-content: flex-start !important;
+          padding-left: 0.8rem;
         }
 
         .team-info {
@@ -350,7 +600,7 @@ function TeamStats() {
           object-fit: contain;
         }
 
-        .team-info span {
+        .team-name {
           font-weight: 600;
           color: white;
         }
@@ -377,17 +627,12 @@ function TeamStats() {
 
         .total-points {
           color: rgba(100, 150, 255, 1);
-          font-weight: 700;
-          font-size: 1.1rem;
+          font-weight: 600;
+          font-size: 1rem !important;
         }
 
         .total-picks {
-          color: rgba(255, 255, 255, 0.8);
-          font-weight: 600;
-        }
-
-        .win-rate {
-          color: rgba(255, 200, 100, 1);
+          color: rgba(100, 150, 255, 1);
           font-weight: 600;
         }
 
@@ -451,7 +696,7 @@ function TeamStats() {
 
         .highlight-stat {
           color: rgba(100, 150, 255, 1);
-          font-weight: 700;
+          font-weight: 600;
           font-size: 1.2rem;
         }
 
@@ -468,6 +713,57 @@ function TeamStats() {
           .team-highlight {
             flex-direction: column;
             gap: 0.5rem;
+          }
+
+          .table-header {
+            grid-template-columns: minmax(200px, 1.5fr) minmax(80px, 0.8fr) minmax(80px, 0.8fr) minmax(80px, 0.8fr) minmax(80px, 0.8fr) minmax(80px, 0.8fr) minmax(80px, 0.8fr);
+          }
+
+          .table-row {
+            grid-template-columns: minmax(200px, 1.5fr) minmax(80px, 0.8fr) minmax(80px, 0.8fr) minmax(80px, 0.8fr) minmax(80px, 0.8fr) minmax(80px, 0.8fr) minmax(80px, 0.8fr);
+          }
+
+          .header-cell,
+          .table-cell {
+            font-size: 0.9rem;
+            padding: 0.75rem 0.25rem;
+          }
+
+          .header-cell {
+            font-size: 0.9rem;
+          }
+
+          .team-cell {
+            padding-left: 0.8rem;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .table-header {
+            grid-template-columns: minmax(150px, 1.2fr) minmax(60px, 0.7fr) minmax(60px, 0.7fr) minmax(60px, 0.7fr) minmax(60px, 0.7fr) minmax(60px, 0.7fr) minmax(60px, 0.7fr);
+          }
+
+          .table-row {
+            grid-template-columns: minmax(150px, 1.2fr) minmax(60px, 0.7fr) minmax(60px, 0.7fr) minmax(60px, 0.7fr) minmax(60px, 0.7fr) minmax(60px, 0.7fr) minmax(60px, 0.7fr);
+          }
+
+          .header-cell,
+          .table-cell {
+            font-size: 0.8rem;
+            padding: 0.5rem 0.2rem;
+          }
+
+          .header-cell {
+            font-size: 0.8rem;
+          }
+
+          .team-cell {
+            padding-left: 0.8rem;
+          }
+
+          .team-logo {
+            width: 24px;
+            height: 24px;
           }
         }
       `}</style>

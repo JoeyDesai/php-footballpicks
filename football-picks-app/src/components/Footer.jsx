@@ -26,7 +26,7 @@ function Footer() {
         </div>
       </div>
 
-      <style jsx>{`
+      <style jsx="true">{`
         .footer {
           background: rgba(255, 255, 255, 0.05);
           backdrop-filter: blur(20px);

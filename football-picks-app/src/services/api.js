@@ -50,8 +50,17 @@ export const statsAPI = {
   getWeeklyStandings: (weekId, tag = 0) => 
     api.get(`/api/weekly-standings/${weekId}?tag=${tag}`),
   
+  getWeeklyStandingsDetailed: (weekId) => 
+    api.get(`/api/weekly-standings-detailed/${weekId}`),
+  
+  getWeeklyStandingsClassic: (weekId) => 
+    api.get(`/api/weekly-standings-classic/${weekId}`),
+  
   getOverallStandings: (tag = 0) => 
     api.get(`/api/overall-standings?tag=${tag}`),
+  
+  getOverallStandingsDetailed: () => 
+    api.get('/api/overall-standings-detailed'),
   
   getTeamStats: () => 
     api.get('/api/team-stats'),

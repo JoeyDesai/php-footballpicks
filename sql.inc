@@ -1,7 +1,7 @@
 <?php 
 #dl ('pgsql.so');
 $dbuser='footballusr';
-$dbpass='pickcowboys';
+$dbpass='password';
 $dbname='football';
 
 $conn=pg_pconnect("host=localhost dbname=$dbname user=$dbuser password=$dbpass") or die ('Could not connect: ' . pg_last_error());

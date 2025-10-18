@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, Target } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 function Header() {
@@ -25,7 +25,7 @@ function Header() {
     <header className="header">
       <div className="header-container">
         <Link to="/" className="header-title" onClick={closeMenu}>
-          <Target className="header-icon" />
+          <img src="/images/logo.png" alt="Football Picks" className="header-logo" />
           Football Picks
         </Link>
 
@@ -69,7 +69,7 @@ function Header() {
         </nav>
       )}
 
-      <style jsx>{`
+      <style jsx="true">{`
         .header {
           background: rgba(255, 255, 255, 0.1);
           backdrop-filter: blur(20px);
@@ -103,8 +103,10 @@ function Header() {
           color: rgba(150, 200, 255, 1);
         }
 
-        .header-icon {
-          color: rgba(100, 150, 255, 1);
+        .header-logo {
+          width: 48px;
+          height: 48px;
+          margin-right: 0.75rem;
         }
 
         .desktop-nav {
@@ -165,20 +167,27 @@ function Header() {
 
         .cta-button {
           display: none;
-          background: linear-gradient(135deg, rgba(100, 150, 255, 0.5), rgba(150, 200, 255, 0.4));
+          background: linear-gradient(135deg, rgba(100, 150, 255, 0.3), rgba(150, 200, 255, 0.2));
           backdrop-filter: blur(10px);
           border: 1px solid rgba(255, 255, 255, 0.3);
           border-radius: 12px;
-          padding: 0.75rem 1.5rem;
+          padding: 0.6rem 1rem;
           color: white;
           text-decoration: none;
-          font-weight: 600;
+          font-weight: 500;
+          font-size: 0.9rem;
           transition: all 0.3s ease;
+          box-shadow: 
+            0 4px 16px rgba(0, 0, 0, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
         }
 
         .cta-button:hover {
           transform: translateY(-2px);
-          box-shadow: 0 8px 25px rgba(100, 150, 255, 0.3);
+          background: linear-gradient(135deg, rgba(100, 150, 255, 0.4), rgba(150, 200, 255, 0.3));
+          box-shadow: 
+            0 8px 25px rgba(100, 150, 255, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
         }
 
         @media (min-width: 1024px) {

@@ -206,7 +206,7 @@ function CreateAccount() {
         </div>
       </div>
 
-      <style jsx>{`
+      <style jsx="true">{`
         .create-account-container {
           min-height: 100vh;
           display: flex;
