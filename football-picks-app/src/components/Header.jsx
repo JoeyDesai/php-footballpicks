@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -31,8 +31,12 @@ function Header() {
 
         {/* Desktop Navigation */}
         <nav className="desktop-nav">
+          <Link to="/make-picks" className="nav-link">Make Picks</Link>
           <Link to="/weekly-standings" className="nav-link">Weekly Standings</Link>
           <Link to="/overall-standings" className="nav-link">Overall Standings</Link>
+          {isAdmin && (
+            <Link to="/admin" className="nav-link admin-link">Admin</Link>
+          )}
           <button onClick={handleLogout} className="nav-link logout-btn">Logout</button>
         </nav>
 
@@ -41,24 +45,25 @@ function Header() {
           {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
 
-        {/* Call to Action Button */}
-        <Link to="/make-picks" className="auto-pick-button">
-          Enter Your Picks
-        </Link>
       </div>
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
           <nav className="mobile-nav">
+            <Link to="/make-picks" className="mobile-nav-link" onClick={closeMenu}>
+              Make Picks
+            </Link>
             <Link to="/weekly-standings" className="mobile-nav-link" onClick={closeMenu}>
               Weekly Standings
             </Link>
             <Link to="/overall-standings" className="mobile-nav-link" onClick={closeMenu}>
               Overall Standings
             </Link>
-            <Link to="/make-picks" className="auto-pick-button mobile-nav-link" onClick={closeMenu}>
-              Enter Your Picks
-            </Link>
+            {isAdmin && (
+              <Link to="/admin" className="mobile-nav-link admin-link" onClick={closeMenu}>
+                Admin
+              </Link>
+            )}
             <button onClick={handleLogout} className="mobile-nav-link logout-btn">
               Logout
             </button>
@@ -73,6 +78,19 @@ function Header() {
           position: sticky;
           top: 0;
           z-index: 1000;
+        }
+
+        /* Mobile-specific header fixes */
+        @media (max-width: 768px) {
+          .header {
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 1000 !important;
+            /* Prevent header from causing scroll offset */
+            transform: translateZ(0) !important;
+            -webkit-transform: translateZ(0) !important;
+            will-change: transform !important;
+          }
         }
 
         .header-container {
@@ -140,6 +158,14 @@ function Header() {
           color: rgba(255, 150, 150, 1);
         }
 
+        .admin-link {
+          color: rgba(255, 215, 0, 0.8);
+        }
+
+        .admin-link:hover {
+          color: rgba(255, 215, 0, 1);
+        }
+
         .mobile-menu-btn {
           display: block;
           background: none;
@@ -161,41 +187,6 @@ function Header() {
           }
         }
 
-        .auto-pick-button {
-          display: none;
-          background: linear-gradient(135deg, rgba(100, 150, 255, 0.3), rgba(150, 200, 255, 0.2));
-          backdrop-filter: blur(20px);
-          border: 1px solid rgba(100, 150, 255, 0.4);
-          color: white;
-          padding: 0.6rem 1rem;
-          border-radius: 12px;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          font-size: 0.9rem;
-          font-weight: 600;
-          text-decoration: none;
-          box-shadow: 
-            0 4px 16px rgba(100, 150, 255, 0.2),
-            0 0 20px rgba(100, 150, 255, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 0.2);
-        }
-
-        .auto-pick-button:hover {
-          background: linear-gradient(135deg, rgba(100, 150, 255, 0.4), rgba(150, 200, 255, 0.3));
-          border-color: rgba(100, 150, 255, 0.6);
-          color: white;
-          transform: translateY(-2px);
-          box-shadow: 
-            0 8px 25px rgba(100, 150, 255, 0.4),
-            0 0 30px rgba(100, 150, 255, 0.2),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-        }
-
-        @media (min-width: 1024px) {
-          .auto-pick-button {
-            display: inline-block;
-          }
-        }
 
         .mobile-nav {
           background: rgba(255, 255, 255, 0.1);

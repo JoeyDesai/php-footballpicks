@@ -17,6 +17,35 @@ function Home() {
     loadHomeData();
   }, []);
 
+  // Fix mobile scroll position on mount
+  useEffect(() => {
+    // Ensure page starts at top on mobile devices
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                     window.innerWidth <= 768 || 
+                     ('ontouchstart' in window);
+    
+    if (isMobile) {
+      // Force scroll to top immediately
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      
+      // Also set on window load to handle any delayed rendering
+      const handleLoad = () => {
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+      };
+      
+      window.addEventListener('load', handleLoad);
+      
+      // Cleanup
+      return () => {
+        window.removeEventListener('load', handleLoad);
+      };
+    }
+  }, []);
+
   // Helper function to format decimal numbers
   const formatNumber = (num) => {
     if (num === null || num === undefined) return '0';
@@ -432,7 +461,9 @@ function Home() {
           display: flex;
           align-items: center;
           gap: 0.5rem;
-          min-width: 150px;
+          min-width: 200px;
+          width: 200px;
+          justify-content: center;
         }
 
         .auto-pick-button {
@@ -470,7 +501,11 @@ function Home() {
           display: flex;
           align-items: center;
           gap: 0.5rem;
-          min-width: 150px;
+          min-width: 200px;
+          width: 200px;
+          justify-content: center;
+          margin: 0;
+          padding: 1rem 2rem; /* Match the base auto-pick-button padding */
         }
 
         /* Popup Styles */
@@ -673,6 +708,27 @@ function Home() {
           .action-buttons {
             flex-direction: column;
             align-items: center;
+          }
+
+          /* Ensure buttons are visible and properly sized on mobile */
+          .auto-pick-button {
+            display: inline-block !important;
+            width: 100%;
+            max-width: 300px;
+            margin: 0.5rem 0;
+            padding: 1rem 1.5rem;
+            font-size: 1.1rem;
+          }
+
+          .action-buttons .auto-pick-button {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            min-width: 200px;
+            width: 200px;
+            margin: 0 !important;
+            padding: 1rem 1.5rem !important; /* Match the mobile auto-pick-button padding */
           }
         }
       `}</style>

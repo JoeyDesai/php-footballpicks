@@ -19,7 +19,11 @@ function WeeklyStandings() {
   const [fullData, setFullData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedTag, setSelectedTag] = useState(0);
-  const [viewMode, setViewMode] = useState('quick'); // 'quick' or 'full'
+  const [viewMode, setViewMode] = useState(() => {
+    // Default to quick view on mobile devices, full view on desktop
+    const isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    return isMobile ? 'quick' : 'full';
+  }); // 'quick' or 'full'
   const [selectedRows, setSelectedRows] = useState([]);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [availableTags, setAvailableTags] = useState([
@@ -50,6 +54,16 @@ function WeeklyStandings() {
     if (window.location.hash === '#autoreload') {
       setAutoRefresh(true);
     }
+
+    // Handle window resize to adjust view mode
+    const handleResize = () => {
+      const isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const newViewMode = isMobile ? 'quick' : 'full';
+      setViewMode(newViewMode);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
@@ -110,41 +124,12 @@ function WeeklyStandings() {
           // For quick view, we need to get the full data to calculate potential correctly
           const fullResponse = await statsAPI.getWeeklyStandingsClassic(selectedWeek.id, selectedTag);
           if (fullResponse.data.success) {
-            // Calculate potential score as: points from ALL games (assuming they pick correctly on remaining)
-            const standingsWithPotential = response.data.standings.map(player => {
-              let potentialScore = 0;
-              let potentialCorrect = 0;
-              
-              // Calculate potential as sum of ALL game weights (assuming they pick correctly on remaining)
-              if (fullResponse.data.games && fullResponse.data.picksByPicker[player.id]) {
-                const weekFactor = fullResponse.data.week?.factor || 1;
-                fullResponse.data.games.forEach(game => {
-                  const playerPick = fullResponse.data.picksByPicker[player.id][game.id];
-                  if (playerPick) {
-                    if (game.winner && playerPick.guess === game.winner) {
-                      // Game completed and they got it right - add the points
-                      potentialScore += (playerPick.weight * weekFactor);
-                      potentialCorrect += 1;
-                    } else if (game.winner === 0) {
-                      // Game ended in a tie - add half points
-                      potentialScore += (playerPick.weight * weekFactor * 0.5);
-                      potentialCorrect += 0.5;
-                    } else if (!game.winner) {
-                      // Game not completed - assume they pick correctly
-                      potentialScore += (playerPick.weight * weekFactor);
-                      potentialCorrect += 1;
-                    }
-                    // If game completed and they got it wrong, they get 0 points
-                  }
-                });
-              }
-              
-              return {
-                ...player,
-                potential_score: potentialScore,
-                potential_correct: potentialCorrect
-              };
-            });
+            // Use the new potential score calculation from backend
+            const standingsWithPotential = fullResponse.data.standings.map(player => ({
+              ...player,
+              potential_score: player.new_potential_score || player.score,
+              potential_correct: player.new_potential_correct || player.numright
+            }));
             
             // Sort by potential score
             const sortedStandings = standingsWithPotential.sort((a, b) => {
@@ -166,41 +151,12 @@ function WeeklyStandings() {
       } else {
         const response = await statsAPI.getWeeklyStandingsClassic(selectedWeek.id, selectedTag);
         if (response.data.success) {
-          // Calculate potential score as: points from ALL games (assuming they pick correctly on remaining)
-          const standingsWithPotential = response.data.standings.map(player => {
-            let potentialScore = 0;
-            let potentialCorrect = 0;
-            
-            // Calculate potential as sum of ALL game weights (assuming they pick correctly on remaining)
-            if (response.data.games && response.data.picksByPicker[player.id]) {
-              const weekFactor = response.data.week?.factor || 1;
-              response.data.games.forEach(game => {
-                const playerPick = response.data.picksByPicker[player.id][game.id];
-                if (playerPick) {
-                  if (game.winner && playerPick.guess === game.winner) {
-                    // Game completed and they got it right - add the points
-                    potentialScore += (playerPick.weight * weekFactor);
-                    potentialCorrect += 1;
-                  } else if (game.winner === 0) {
-                    // Game ended in a tie - add half points
-                    potentialScore += (playerPick.weight * weekFactor * 0.5);
-                    potentialCorrect += 0.5;
-                  } else if (!game.winner) {
-                    // Game not completed - assume they pick correctly
-                    potentialScore += (playerPick.weight * weekFactor);
-                    potentialCorrect += 1;
-                  }
-                  // If game completed and they got it wrong, they get 0 points
-                }
-              });
-            }
-            
-            return {
+            // Use the new potential score calculation from backend
+            const standingsWithPotential = response.data.standings.map(player => ({
               ...player,
-              potential_score: potentialScore,
-              potential_correct: potentialCorrect
-            };
-          });
+              potential_score: player.new_potential_score || player.score,
+              potential_correct: player.new_potential_correct || player.numright
+            }));
           
           // Sort by potential score instead of current score
           const sortedStandings = standingsWithPotential.sort((a, b) => {
@@ -252,7 +208,10 @@ function WeeklyStandings() {
           <div className="header-cell player-header">Player</div>
           <div className="header-cell data-header">Correct</div>
           <div className="header-cell data-header">Score</div>
-          <div className="header-cell data-header">Potential</div>
+          <div className="header-cell data-header">
+            <span className="desktop-text">Potential</span>
+            <span className="mobile-text">Pot.</span>
+          </div>
         </div>
       </div>
       <div className="quick-body-wrapper">
@@ -719,7 +678,7 @@ function WeeklyStandings() {
           display: flex;
           align-items: center;
           justify-content: center;
-          min-height: 40px;
+          height: 40px;
           box-shadow: 
             0 4px 16px rgba(0, 0, 0, 0.1),
             inset 0 1px 0 rgba(255, 255, 255, 0.1);
@@ -960,7 +919,7 @@ function WeeklyStandings() {
 
         @media (max-width: 889px) {
           .quick-header {
-            grid-template-columns: 35px 1fr 60px 60px 66px;
+            grid-template-columns: 35px 1fr 60px 60px 60px;
           }
 
           .quick-row {
@@ -975,16 +934,18 @@ function WeeklyStandings() {
 
           .quick-header .header-cell {
             padding: 0.3rem 0.1rem;
+            font-size: 0.8rem;
           }
 
           .quick-row .table-cell.player-name .name {
             max-width: 100%;
+            font-size: 0.9rem;
           }
         }
 
         @media (max-width: 768px) {
           .quick-header {
-            grid-template-columns: 30px 1fr 55px 55px 61px;
+            grid-template-columns: 30px 1fr 55px 55px 55px;
           }
 
           .quick-row {
@@ -999,12 +960,17 @@ function WeeklyStandings() {
 
           .quick-header .header-cell {
             padding: 0.25rem 0.08rem;
+            font-size: 0.75rem;
+          }
+
+          .quick-row .table-cell.player-name .name {
+            font-size: 0.85rem;
           }
         }
 
         @media (max-width: 480px) {
           .quick-header {
-            grid-template-columns: 25px 1fr 45px 45px 51px;
+            grid-template-columns: 25px 1fr 45px 45px 45px;
           }
 
           .quick-row {
@@ -1019,6 +985,11 @@ function WeeklyStandings() {
 
           .quick-header .header-cell {
             padding: 0.2rem 0.05rem;
+            font-size: 0.7rem;
+          }
+
+          .quick-row .table-cell.player-name .name {
+            font-size: 0.8rem;
           }
         }
 
@@ -1039,6 +1010,11 @@ function WeeklyStandings() {
 
           .quick-header .header-cell {
             padding: 0.15rem 0.03rem;
+            font-size: 0.65rem;
+          }
+
+          .quick-row .table-cell.player-name .name {
+            font-size: 0.75rem;
           }
         }
 
@@ -1218,7 +1194,6 @@ function WeeklyStandings() {
           display: grid;
           gap: 0.05rem;
           min-width: 100%;
-          width: max-content;
         }
 
 
@@ -1352,11 +1327,11 @@ function WeeklyStandings() {
         }
 
         .away-team {
-          color: rgba(255, 150, 150, 1);
+          color: rgba(150, 200, 255, 1);
         }
 
         .home-team {
-          color: rgba(150, 255, 150, 1);
+          color: rgba(150, 200, 255, 1);
         }
 
         .vs {
@@ -1371,12 +1346,12 @@ function WeeklyStandings() {
         }
 
         .away-score {
-          color: rgba(255, 150, 150, 1);
+          color: rgba(150, 200, 255, 1);
           font-weight: 700;
         }
 
         .home-score {
-          color: rgba(150, 255, 150, 1);
+          color: rgba(150, 200, 255, 1);
           font-weight: 700;
         }
 
@@ -1460,7 +1435,7 @@ function WeeklyStandings() {
             max-width: 180px;
             padding: 0.5rem 0.75rem;
             font-size: 0.85rem;
-            min-height: 36px;
+            height: 36px;
           }
 
           .desktop-text {
@@ -1560,7 +1535,7 @@ function WeeklyStandings() {
           .auto-refresh-button {
             padding: 0.45rem 0.6rem;
             font-size: 0.8rem;
-            min-height: 32px;
+            height: 32px;
           }
 
           .slider-track {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Lock, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -11,6 +11,35 @@ function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
+
+  // Fix mobile scroll position on mount
+  useEffect(() => {
+    // Ensure page starts at top on mobile devices
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                     window.innerWidth <= 768 || 
+                     ('ontouchstart' in window);
+    
+    if (isMobile) {
+      // Force scroll to top immediately
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      
+      // Also set on window load to handle any delayed rendering
+      const handleLoad = () => {
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+      };
+      
+      window.addEventListener('load', handleLoad);
+      
+      // Cleanup
+      return () => {
+        window.removeEventListener('load', handleLoad);
+      };
+    }
+  }, []);
 
   const handleChange = (e) => {
     setFormData({
@@ -51,7 +80,7 @@ function Login() {
 
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
-            <label htmlFor="email">Email Address</label>
+            <label htmlFor="email">Username</label>
             <div className="input-wrapper">
               <Mail className="input-icon" />
               <input
@@ -61,7 +90,7 @@ function Login() {
                 value={formData.email}
                 onChange={handleChange}
                 className="glass-input"
-                placeholder="Enter your email"
+                placeholder="Enter your username"
                 required
               />
             </div>
@@ -163,6 +192,8 @@ function Login() {
 
         .input-wrapper {
           position: relative;
+          display: block;
+          width: 100%;
         }
 
         .input-icon {
@@ -187,6 +218,59 @@ function Login() {
         .login-footer p {
           color: rgba(255, 255, 255, 0.7);
           margin-bottom: 1rem;
+        }
+
+        /* Mobile-specific fixes for input cursor positioning */
+        @media (max-width: 768px) {
+          .input-wrapper {
+            position: relative;
+            display: block;
+            width: 100%;
+            /* Remove any transform that might interfere */
+            transform: none;
+          }
+
+          .input-wrapper .glass-input {
+            font-size: 16px !important; /* Prevents zoom on iOS */
+            -webkit-text-size-adjust: 100%;
+            -webkit-user-select: text;
+            -webkit-tap-highlight-color: transparent;
+            line-height: 1.4;
+            vertical-align: middle;
+            /* Fix cursor positioning */
+            position: relative;
+            z-index: 1;
+            display: block;
+            width: 100%;
+            margin: 0;
+            /* Remove backdrop-filter on mobile to prevent cursor issues */
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            /* Ensure proper text alignment */
+            text-align: left;
+            text-align: start;
+          }
+
+          .input-icon {
+            z-index: 2;
+            pointer-events: none;
+            /* Ensure icon doesn't interfere with cursor */
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+          }
+
+          /* Additional mobile input fixes */
+          .glass-input:focus {
+            /* Remove complex focus effects on mobile */
+            outline: none;
+            border-color: rgba(100, 150, 255, 0.6);
+            box-shadow: 0 0 0 2px rgba(100, 150, 255, 0.2);
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+          }
         }
       `}</style>
     </div>

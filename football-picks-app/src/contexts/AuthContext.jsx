@@ -78,12 +78,16 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // Check if user is admin
+  const isAdmin = user && (user.email === 'jase@jasetheace.com' || user.email === 'joe');
+
   const value = {
     user,
     login,
     logout,
     createAccount,
-    loading
+    loading,
+    isAdmin
   };
 
   return (

@@ -4,15 +4,154 @@
   box-sizing: border-box;
 }
 
+html {
+  background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('/images/background.jpg');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-color: #000;
+  min-height: 100vh;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('/images/background.jpg');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-color: #000;
   color: white;
   min-height: 100vh;
   overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+/* Minimal PWA safe area handling - only for iPhone dynamic island */
+@media (display-mode: standalone) and (max-width: 768px) {
+  .header {
+    padding-top: 40px; /* Small fixed offset for dynamic island */
+  }
+}
+
+/* JavaScript-detected iPhone PWA mode - minimal spacing */
+body.iphone-pwa .header {
+  padding-top: 40px; /* Small fixed offset for dynamic island */
+}
+
+/* Mobile-specific fixes for better background coverage */
+@media (max-width: 768px) {
+  html {
+    background: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('/images/background_mobile.jpg') !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-attachment: fixed !important; /* Keep fixed for mobile since image is taller */
+    background-repeat: no-repeat !important;
+    background-color: #000 !important;
+    min-height: 100vh !important;
+    min-height: 100dvh !important; /* Use dynamic viewport height */
+    height: 100% !important;
+    /* Prevent initial scroll offset */
+    scroll-behavior: auto !important;
+    overflow-x: hidden !important;
+  }
+  
+  body {
+    background: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('/images/background_mobile.jpg') !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-attachment: fixed !important; /* Keep fixed for mobile since image is taller */
+    background-repeat: no-repeat !important;
+    background-color: #000 !important;
+    min-height: 100vh !important;
+    min-height: 100dvh !important; /* Use dynamic viewport height */
+    height: 100% !important;
+    width: 100% !important;
+    position: relative !important;
+    /* Prevent initial scroll offset */
+    scroll-behavior: auto !important;
+    overflow-x: hidden !important;
+    /* Ensure page starts at top */
+    scroll-padding-top: 0 !important;
+  }
+
+  /* Ensure the app container covers full viewport */
+  .app-container {
+    min-height: 100vh !important;
+    min-height: 100dvh !important; /* Use dynamic viewport height */
+    height: 100% !important;
+    width: 100% !important;
+    /* Prevent initial scroll offset */
+    scroll-behavior: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Force full viewport coverage on mobile */
+  * {
+    box-sizing: border-box;
+  }
+
+  /* Ensure all containers take full height */
+  .home-container,
+  .welcome-section,
+  .stats-grid,
+  .quick-actions {
+    width: 100% !important;
+  }
+
+  /* Fix mobile input cursor positioning */
+  .glass-input {
+    font-size: 16px !important; /* Prevents zoom on iOS */
+    -webkit-text-size-adjust: 100%;
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-tap-highlight-color: transparent;
+    line-height: 1.4;
+    vertical-align: middle;
+    /* Remove backdrop-filter on mobile to prevent cursor issues */
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    /* Ensure proper text alignment */
+    text-align: left;
+    text-align: start;
+  }
+
+  /* Ensure proper input positioning on mobile */
+  .input-wrapper {
+    position: relative;
+    display: block;
+    width: 100%;
+    /* Remove any transform that might interfere */
+    transform: none;
+  }
+
+  .input-wrapper .glass-input {
+    position: relative;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    margin: 0;
+    /* Additional mobile-specific fixes */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    border-radius: 12px;
+    padding: 1rem;
+    box-sizing: border-box;
+  }
+
+  /* Fix focus states on mobile */
+  .glass-input:focus {
+    outline: none;
+    border-color: rgba(100, 150, 255, 0.6);
+    box-shadow: 0 0 0 2px rgba(100, 150, 255, 0.2);
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
 }
 
 
@@ -60,6 +199,10 @@ body {
   font-size: 1rem;
   width: 100%;
   transition: all 0.3s ease;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }
 
 .glass-input:focus {
@@ -538,4 +681,953 @@ body {
 @media (min-width: 768px) {
   .md\:flex { display: flex; }
   .md\:hidden { display: none; }
+}
+
+/* Admin Panel Styles */
+.admin-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  min-height: calc(100vh - 200px);
+}
+
+.admin-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.admin-header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+.admin-header p {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1.1rem;
+}
+
+.admin-navigation {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.admin-nav-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 150px;
+  justify-content: center;
+}
+
+.admin-nav-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.admin-nav-button.active {
+  background: linear-gradient(135deg, rgba(100, 150, 255, 0.3), rgba(150, 200, 255, 0.2));
+  border-color: rgba(100, 150, 255, 0.4);
+  color: white;
+  box-shadow: 0 4px 16px rgba(100, 150, 255, 0.2);
+}
+
+.admin-content {
+  min-height: 400px;
+}
+
+.admin-navigation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.admin-navigation .admin-header {
+  text-align: center;
+}
+
+.admin-navigation .admin-header h1 {
+  margin: 0 0 0.5rem 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.admin-navigation .admin-header p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1rem;
+}
+
+.admin-nav-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.admin-panel {
+  width: 100%;
+}
+
+.admin-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.admin-panel-header h2 {
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.picks-status-content {
+  min-height: 300px;
+}
+
+.picks-status-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.picks-status-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  min-height: 40px;
+}
+
+.user-name {
+  color: white;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.status-icon.success {
+  color: #4ade80;
+}
+
+.status-icon.error {
+  color: #f87171;
+}
+
+.status-text {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.8rem;
+}
+
+.user-search-container {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.search-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-input input {
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  font-size: 1rem;
+  width: 300px;
+}
+
+.search-input input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.search-input input:focus {
+  outline: none;
+  border-color: rgba(100, 150, 255, 0.5);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* User Dropdown Styles */
+.user-dropdown-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+}
+
+.user-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: rgba(20, 20, 30, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+  margin-top: 4px;
+}
+
+.user-dropdown-item {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.user-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.user-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.user-dropdown-item.no-users {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.user-dropdown-item.no-users:hover {
+  background: transparent;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.user-name {
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.user-realname {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+.user-email {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.75rem;
+}
+
+/* Classic View Styles */
+.classic-games-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: relative;
+  z-index: auto;
+}
+
+.classic-game-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  min-height: 80px;
+  position: relative;
+}
+
+.classic-game-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.team-info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  flex: 2;
+  max-width: 200px;
+}
+
+.team-info-section.away-team {
+  text-align: right;
+  align-items: flex-end;
+}
+
+.team-info-section.home-team {
+  text-align: left;
+  align-items: flex-start;
+}
+
+.team-logo-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+  width: 35px;
+}
+
+.team-logo-large {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
+.radio-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+  width: 25px;
+}
+
+.team-name-small {
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  line-height: 1.1;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+  flex-wrap: nowrap;
+}
+
+.team-record-small {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.8rem;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.vs-divider {
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 600;
+  font-size: 1.2rem;
+  padding: 0 0.1rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-row-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+}
+
+.point-selector {
+  min-width: 120px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+/* Classic View Team Logo Responsive Rules */
+/* Desktop: Hide mobile logos, show desktop logos */
+@media (min-width: 769px) {
+  .team-info-section {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.25rem !important;
+    flex: 2 !important;
+    max-width: 200px !important;
+    position: static !important;
+  }
+
+  .team-info-section.away-team {
+    text-align: right !important;
+    align-items: flex-end !important;
+  }
+
+  .team-info-section.home-team {
+    text-align: left !important;
+    align-items: flex-start !important;
+  }
+
+  .team-logo-section {
+    width: 35px !important;
+    padding: 0 !important;
+    flex-shrink: 0 !important;
+    margin-bottom: 0 !important;
+    display: flex !important;
+  }
+
+  .team-logo-large {
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  /* Hide mobile logos on desktop */
+  .mobile-logo {
+    display: none !important;
+  }
+}
+
+/* Mobile: Show mobile logos, hide desktop logos */
+@media (max-width: 768px) {
+  .classic-game-row {
+    padding: 0.75rem 0.5rem;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: stretch;
+    min-height: auto;
+  }
+
+  .game-row-main {
+    flex-direction: row;
+    gap: 0.25rem;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .team-info-section {
+    max-width: 100px;
+    text-align: center;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .team-info-section.away-team,
+  .team-info-section.home-team {
+    text-align: center;
+    align-items: center;
+  }
+
+  .team-name-small {
+    font-size: 0.8rem !important;
+    line-height: 1.1 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 100% !important;
+    display: block !important;
+  }
+
+  .team-record-small {
+    font-size: 0.7rem !important;
+    line-height: 1.1 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 100% !important;
+    display: block !important;
+  }
+
+  .team-logo-section {
+    display: none;
+  }
+
+  .mobile-logo {
+    display: flex !important;
+    justify-content: center;
+    margin-bottom: 0.25rem;
+  }
+
+  .team-logo-section:not(.mobile-logo) {
+    display: none !important;
+  }
+
+  .team-logo-large {
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  .radio-section {
+    width: 25px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .vs-divider {
+    padding: 0 0.1rem;
+    font-size: 1rem;
+  }
+
+  .point-selector {
+    align-self: center;
+    margin-top: 0.5rem;
+    min-width: 100px;
+  }
+
+  /* Admin page mobile responsiveness */
+  .admin-panel-header {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .user-search-container {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .user-dropdown-wrapper {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .search-input input {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .selected-user-info {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .selected-user-info h3 {
+    font-size: 1rem;
+    margin: 0;
+  }
+}
+
+/* Extra small mobile screens */
+@media (max-width: 480px) {
+  .team-info-section {
+    max-width: 80px;
+  }
+
+  .team-name-small {
+    font-size: 0.75rem !important;
+  }
+
+  .team-record-small {
+    font-size: 0.65rem !important;
+  }
+
+  .vs-divider {
+    font-size: 0.9rem;
+    padding: 0 0.05rem;
+  }
+
+  .radio-section {
+    width: 20px;
+  }
+
+  .classic-game-row {
+    padding: 0.5rem 0.25rem;
+  }
+}
+
+/* Submit Section Styles */
+.submit-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.submit-section .glass-button {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.7);
+  padding: 0.6rem 1rem;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 200px;
+  justify-content: center;
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.submit-section .glass-button:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: white;
+  box-shadow: 
+    0 6px 20px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.submit-section .glass-button:disabled {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.4);
+  cursor: not-allowed;
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  z-index: 1;
+}
+
+.user-picks-interface {
+  width: 100%;
+}
+
+.selected-user-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.selected-user-info h3 {
+  color: white;
+  font-size: 1.2rem;
+}
+
+.games-container {
+  margin-bottom: 2rem;
+}
+
+.games-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.game-pick {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.game-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  min-width: 300px;
+}
+
+.team {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.team img {
+  width: 24px;
+  height: 24px;
+}
+
+.team span {
+  color: white;
+  font-weight: 500;
+}
+
+.vs {
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+}
+
+.pick-options {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.pick-button {
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.pick-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+.pick-button.selected {
+  background: linear-gradient(135deg, rgba(100, 150, 255, 0.3), rgba(150, 200, 255, 0.2));
+  border-color: rgba(100, 150, 255, 0.4);
+  color: white;
+}
+
+.value-input {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 120px;
+}
+
+.value-input label {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.value-input input {
+  width: 60px;
+  padding: 0.25rem 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: white;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.value-input input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.value-input input:focus {
+  outline: none;
+  border-color: rgba(100, 150, 255, 0.5);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.save-picks-container {
+  display: flex;
+  justify-content: center;
+}
+
+.save-picks-button {
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, rgba(100, 150, 255, 0.3), rgba(150, 200, 255, 0.2));
+  border: 1px solid rgba(100, 150, 255, 0.4);
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.save-picks-button:hover {
+  background: linear-gradient(135deg, rgba(100, 150, 255, 0.4), rgba(150, 200, 255, 0.3));
+  border-color: rgba(100, 150, 255, 0.6);
+  transform: translateY(-2px);
+}
+
+.save-picks-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.no-user-selected {
+  text-align: center;
+  padding: 3rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.update-scripts-content {
+  min-height: 300px;
+}
+
+.script-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.script-button {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.script-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.script-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.script-icon {
+  color: rgba(100, 150, 255, 0.8);
+}
+
+.admin-access-denied {
+  text-align: center;
+  padding: 3rem;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+}
+
+.admin-access-denied h1 {
+  color: #f87171;
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.admin-access-denied p {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1.1rem;
+}
+
+.error-message {
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  color: #f87171;
+  margin-bottom: 1rem;
+}
+
+.success-message {
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  color: #4ade80;
+  margin-bottom: 1rem;
+}
+
+.no-data {
+  text-align: center;
+  padding: 2rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.no-data p {
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* Mobile Responsive Admin Styles */
+@media (max-width: 768px) {
+  .admin-container {
+    padding: 1rem;
+  }
+  
+  .admin-navigation {
+    flex-direction: column;
+  }
+  
+  .admin-nav-button {
+    min-width: auto;
+    width: 100%;
+  }
+  
+  .admin-panel-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-input input {
+    width: 100%;
+  }
+  
+  .game-pick {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .game-info {
+    min-width: auto;
+    justify-content: center;
+  }
+  
+  .pick-options {
+    justify-content: center;
+  }
+  
+  .script-buttons {
+    gap: 0.5rem;
+  }
+  
+  .script-button {
+    padding: 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .picks-status-item {
+    padding: 0.4rem 0.6rem;
+    min-height: 36px;
+  }
+  
+  .user-name {
+    font-size: 0.85rem;
+  }
+  
+  .status-text {
+    font-size: 0.75rem;
+  }
 }

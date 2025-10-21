@@ -18,7 +18,11 @@ function OverallStandings() {
   const [detailedData, setDetailedData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedTag, setSelectedTag] = useState(0);
-  const [viewMode, setViewMode] = useState('condensed'); // 'condensed' or 'classic'
+  const [viewMode, setViewMode] = useState(() => {
+    // Default to condensed view on mobile devices, classic view on desktop
+    const isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    return isMobile ? 'condensed' : 'classic';
+  }); // 'condensed' or 'classic'
   const [selectedRow, setSelectedRow] = useState(null);
   const [availableTags, setAvailableTags] = useState([
     { id: 0, name: 'All' }
@@ -41,6 +45,16 @@ function OverallStandings() {
 
   useEffect(() => {
     loadUserTags();
+
+    // Handle window resize to adjust view mode
+    const handleResize = () => {
+      const isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const newViewMode = isMobile ? 'condensed' : 'classic';
+      setViewMode(newViewMode);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
@@ -140,7 +154,8 @@ function OverallStandings() {
           <div 
             className="full-header"
             style={{
-              gridTemplateColumns: `60px 250px 160px repeat(${weeks.length}, minmax(100px, 1fr)) 6px`
+              gridTemplateColumns: `60px 250px 180px repeat(${weeks.length}, minmax(100px, 1fr)) 6px`,
+              '--week-count': weeks.length
             }}
           >
             <div className="header-cell rank-header">#</div>
@@ -166,7 +181,8 @@ function OverallStandings() {
               className={`full-row ${player.id === user?.id ? 'current-user' : ''} ${selectedRow === player.id ? 'selected' : ''}`}
               onClick={() => handleRowClick(player.id)}
               style={{
-                gridTemplateColumns: `60px 250px 160px repeat(${weeks.length}, minmax(100px, 1fr))`
+                gridTemplateColumns: `60px 250px 180px repeat(${weeks.length}, minmax(100px, 1fr))`,
+                '--week-count': weeks.length
               }}
             >
               <div className="table-cell rank">
@@ -682,6 +698,7 @@ function OverallStandings() {
         .rank {
           font-weight: 600;
           color: rgba(150, 200, 255, 1);
+          font-size: 1.1rem;
         }
 
         .player-name {
@@ -708,11 +725,13 @@ function OverallStandings() {
         .correct {
           color: rgba(150, 255, 150, 1);
           font-weight: 600;
+          font-size: 1.1rem;
         }
 
         .average {
           color: rgba(255, 200, 100, 1);
           font-weight: 600;
+          font-size: 1.1rem;
         }
 
         @media (max-width: 889px) {
@@ -732,10 +751,12 @@ function OverallStandings() {
 
           .quick-header .header-cell {
             padding: 0.3rem 0.1rem;
+            font-size: 0.8rem;
           }
 
           .quick-row .table-cell.player-name .name {
             max-width: 100%;
+            font-size: 0.9rem;
           }
         }
 
@@ -756,12 +777,17 @@ function OverallStandings() {
 
           .quick-header .header-cell {
             padding: 0.25rem 0.08rem;
+            font-size: 0.75rem;
+          }
+
+          .quick-row .table-cell.player-name .name {
+            font-size: 0.85rem;
           }
         }
 
         @media (max-width: 480px) {
           .quick-header {
-            grid-template-columns: 25px 1fr 45px 45px 51px;
+            grid-template-columns: 25px 1fr 45px 45px 45px;
           }
 
           .quick-row {
@@ -776,6 +802,11 @@ function OverallStandings() {
 
           .quick-header .header-cell {
             padding: 0.2rem 0.05rem;
+            font-size: 0.7rem;
+          }
+
+          .quick-row .table-cell.player-name .name {
+            font-size: 0.8rem;
           }
         }
 
@@ -796,6 +827,11 @@ function OverallStandings() {
 
           .quick-header .header-cell {
             padding: 0.15rem 0.03rem;
+            font-size: 0.65rem;
+          }
+
+          .quick-row .table-cell.player-name .name {
+            font-size: 0.75rem;
           }
         }
 
@@ -1341,7 +1377,6 @@ function OverallStandings() {
         .total-label {
           font-weight: 700;
           color: rgba(150, 200, 255, 1);
-          font-size: 1.1rem;
         }
 
         /* Total column data styling */
@@ -1380,7 +1415,6 @@ function OverallStandings() {
         .week-number {
           font-weight: 700;
           color: rgba(150, 200, 255, 1);
-          font-size: 1.1rem;
         }
 
         .week-data {
@@ -1410,6 +1444,26 @@ function OverallStandings() {
 
 
         @media (max-width: 889px) {
+          .full-header .header-cell,
+          .full-row .table-cell {
+            font-size: 0.9rem;
+            padding: 0.25rem 0.1rem;
+          }
+
+          .full-header .header-cell {
+            padding: 0.3rem 0.1rem;
+            font-size: 0.8rem;
+          }
+
+          .full-row .table-cell.player-name .name {
+            max-width: 100%;
+            font-size: 0.9rem;
+          }
+
+          .rank, .score, .correct, .average, .week-score, .week-correct, .total-score, .total-correct, .rank-display {
+            font-size: 0.9rem;
+          }
+
           .full-table-container {
             min-width: 600px;
             overflow-x: auto;
@@ -1427,6 +1481,105 @@ function OverallStandings() {
             overflow-x: auto;
             width: 100%;
             min-width: 100%;
+          }
+
+          /* Override grid columns for mobile */
+          .full-header {
+            grid-template-columns: 40px 180px 140px repeat(var(--week-count, 1), minmax(70px, 1fr)) 6px !important;
+          }
+
+          .full-row {
+            grid-template-columns: 40px 180px 140px repeat(var(--week-count, 1), minmax(70px, 1fr)) !important;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .full-header .header-cell,
+          .full-row .table-cell {
+            font-size: 0.85rem;
+            padding: 0.2rem 0.08rem;
+          }
+
+          .full-header .header-cell {
+            padding: 0.25rem 0.08rem;
+            font-size: 0.75rem;
+          }
+
+          .full-row .table-cell.player-name .name {
+            font-size: 0.85rem;
+          }
+
+          .rank, .score, .correct, .average, .week-score, .week-correct, .total-score, .total-correct, .rank-display {
+            font-size: 0.85rem;
+          }
+
+          /* Override grid columns for mobile */
+          .full-header {
+            grid-template-columns: 35px 150px 120px repeat(var(--week-count, 1), minmax(60px, 1fr)) 6px !important;
+          }
+
+          .full-row {
+            grid-template-columns: 35px 150px 120px repeat(var(--week-count, 1), minmax(60px, 1fr)) !important;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .full-header .header-cell,
+          .full-row .table-cell {
+            font-size: 0.8rem;
+            padding: 0.15rem 0.05rem;
+          }
+
+          .full-header .header-cell {
+            padding: 0.2rem 0.05rem;
+            font-size: 0.7rem;
+          }
+
+          .full-row .table-cell.player-name .name {
+            font-size: 0.8rem;
+          }
+
+          .rank, .score, .correct, .average, .week-score, .week-correct, .total-score, .total-correct, .rank-display {
+            font-size: 0.8rem;
+          }
+
+          /* Override grid columns for mobile */
+          .full-header {
+            grid-template-columns: 30px 120px 100px repeat(var(--week-count, 1), minmax(50px, 1fr)) 6px !important;
+          }
+
+          .full-row {
+            grid-template-columns: 30px 120px 100px repeat(var(--week-count, 1), minmax(50px, 1fr)) !important;
+          }
+        }
+
+        @media (max-width: 360px) {
+          .full-header .header-cell,
+          .full-row .table-cell {
+            font-size: 0.75rem;
+            padding: 0.1rem 0.03rem;
+          }
+
+          .full-header .header-cell {
+            padding: 0.15rem 0.03rem;
+            font-size: 0.65rem;
+          }
+
+          .full-row .table-cell.player-name .name {
+            font-size: 0.75rem;
+          }
+
+          .rank, .score, .correct, .average, .week-score, .week-correct, .total-score, .total-correct, .rank-display {
+            font-size: 0.75rem;
+          }
+
+          /* Override grid columns for mobile */
+          .full-header {
+            grid-template-columns: 25px 100px 90px repeat(var(--week-count, 1), minmax(40px, 1fr)) 6px !important;
+          }
+
+          .full-row {
+            grid-template-columns: 25px 100px 90px repeat(var(--week-count, 1), minmax(40px, 1fr)) !important;
           }
         }
       `}</style>

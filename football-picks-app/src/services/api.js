@@ -1,8 +1,10 @@
 // API service for Football Picks app
 import axios from 'axios';
 
-// Local backend
-const BASE_URL = 'http://localhost:3001';
+// Backend URL - use network IP when accessing from mobile
+const BASE_URL = window.location.hostname === 'localhost' 
+  ? 'http://localhost:3001' 
+  : 'http://192.168.1.171:3001';
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -70,6 +72,23 @@ export const statsAPI = {
   
   getHomeStats: () => 
     api.get('/api/home-stats')
+};
+
+export const adminAPI = {
+  getUsers: () => 
+    api.get('/api/admin/users'),
+  
+  getPicksStatus: (weekId) => 
+    api.get(`/api/admin/picks-status/${weekId}`),
+  
+  getUserPicks: (userId, weekId) => 
+    api.get(`/api/admin/user-picks/${userId}/${weekId}`),
+  
+  submitUserPicks: (userId, weekId, picks) => 
+    api.post(`/api/admin/user-picks/${userId}/${weekId}`, picks),
+  
+  runScript: (scriptType) => 
+    api.post('/api/admin/run-script', { scriptType })
 };
 
 export default api;

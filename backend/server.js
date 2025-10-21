@@ -1,16 +1,16 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
 const session = require('express-session');
 const cors = require('cors');
 const path = require('path');
 const pool = require('./config/database');
+const scriptConfig = require('./config/scripts');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: ['http://localhost:5173', 'http://192.168.1.171:5173'],
   credentials: true
 }));
 
@@ -119,17 +119,8 @@ app.post('/api/login', async (req, res) => {
     }
 
     const user = result.rows[0];
-    // Check if password is plain text (original system) or bcrypt hashed
-    const isPlainText = user.password.length < 20; // bcrypt hashes are typically 60+ chars
-    let validPassword = false;
-    
-    if (isPlainText) {
-      // Original system uses plain text passwords
-      validPassword = password === user.password;
-    } else {
-      // New system uses bcrypt
-      validPassword = await bcrypt.compare(password, user.password);
-    }
+    // Use plain text password comparison
+    const validPassword = password === user.password;
     
     if (!validPassword) {
       return res.json({ success: false, error: 'Invalid email or password' });
@@ -175,28 +166,32 @@ app.post('/api/create-account', async (req, res) => {
       return res.json({ success: false, error: 'All fields are required' });
     }
 
-    // Check if email already exists
+    // Check if email already exists for current year
+    const currentYear = new Date().getFullYear();
     const existingUser = await pool.query(
-      'SELECT id FROM pickers WHERE email = $1',
-      [email]
+      'SELECT id FROM pickers WHERE email = $1 AND year = $2',
+      [email, currentYear]
     );
     
     if (existingUser.rows.length > 0) {
       return res.json({ success: false, error: 'Email already exists' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const currentYear = new Date().getFullYear();
-    
     await pool.query(
       'INSERT INTO pickers (email, password, nickname, realname, year) VALUES ($1, $2, $3, $4, $5)',
-      [email, hashedPassword, nickName, realName, currentYear]
+      [email, password, nickName, realName, currentYear]
     );
     
     res.json({ success: true, message: 'Account created successfully' });
   } catch (error) {
     console.error('Create account error:', error);
-    res.json({ success: false, error: 'Could not create account' });
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      constraint: error.constraint
+    });
+    res.json({ success: false, error: `Could not create account: ${error.message}` });
   }
 });
 
@@ -611,10 +606,71 @@ app.get('/api/weekly-standings-classic/:weekId', requireAuth, async (req, res) =
         winner: pick.winner
       };
     });
+
+    // Calculate new potential score (X) for each player
+    const standingsWithNewPotential = standingsResult.rows.map(player => {
+      let newPotentialScore = 0;
+      let newPotentialCorrect = 0;
+      
+      if (picksByPicker[player.id]) {
+        const weekFactor = week.factor || 1;
+        
+        gamesResult.rows.forEach(game => {
+          const playerPick = picksByPicker[player.id][game.id];
+          if (playerPick) {
+            const points = playerPick.weight * weekFactor;
+            
+            if (game.winner !== null && game.winner !== undefined) {
+              // Game is completed
+              if (playerPick.guess === game.winner) {
+                // Correct pick
+                newPotentialScore += points;
+                newPotentialCorrect += 1;
+              } else if (game.winner === 0) {
+                // Game ended in a tie - give half points
+                newPotentialScore += points * 0.5;
+                newPotentialCorrect += 0.5;
+              }
+              // If wrong pick, no points
+            } else {
+              // Game not completed yet
+              if (game.homescore !== null && game.awayscore !== null) {
+                // Game is in progress - determine winner based on current score
+                let currentWinner = null;
+                if (game.homescore > game.awayscore) {
+                  currentWinner = game.home_id;
+                } else if (game.awayscore > game.homescore) {
+                  currentWinner = game.away_id;
+                } else {
+                  // Game is tied - give full points as per user requirement
+                  newPotentialScore += points;
+                  newPotentialCorrect += 1;
+                }
+                
+                if (currentWinner && playerPick.guess === currentWinner) {
+                  newPotentialScore += points;
+                  newPotentialCorrect += 1;
+                }
+              } else {
+                // Game hasn't started - assume correct pick
+                newPotentialScore += points;
+                newPotentialCorrect += 1;
+              }
+            }
+          }
+        });
+      }
+      
+      return {
+        ...player,
+        new_potential_score: newPotentialScore,
+        new_potential_correct: newPotentialCorrect
+      };
+    });
     
     res.json({ 
       success: true, 
-      standings: standingsResult.rows,
+      standings: standingsWithNewPotential,
       games: gamesResult.rows,
       picksByPicker: picksByPicker,
       week: week
@@ -710,6 +766,232 @@ app.get('/api/team-stats', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Get team stats error:', error);
     res.json({ success: false, error: 'Database error' });
+  }
+});
+
+// Admin middleware - check if user is admin
+const requireAdmin = async (req, res, next) => {
+  try {
+    console.log('Admin check - session userId:', req.session.userId);
+    
+    if (!req.session.userId) {
+      console.log('Admin check failed: No session userId');
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+    
+    const result = await pool.query(
+      'SELECT email FROM pickers WHERE id = $1',
+      [req.session.userId]
+    );
+    
+    if (result.rows.length === 0) {
+      console.log('Admin check failed: User not found in database');
+      return res.status(401).json({ success: false, error: 'User not found' });
+    }
+    
+    const userEmail = result.rows[0].email;
+    console.log('Admin check - user email:', userEmail);
+    
+    if (userEmail !== 'jase@jasetheace.com' && userEmail !== 'joe' && userEmail !== 'your-email@example.com') {
+      console.log('Admin check failed: User is not admin');
+      return res.status(403).json({ success: false, error: 'Admin access required' });
+    }
+    
+    console.log('Admin check passed');
+    next();
+  } catch (error) {
+    console.error('Admin check error:', error);
+    res.status(500).json({ success: false, error: 'Database error' });
+  }
+};
+
+// Admin routes
+
+// Get all users for admin
+app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const currentYear = new Date().getFullYear();
+    
+    const result = await pool.query(`
+      SELECT id, email, nickname, realname, active
+      FROM pickers 
+      WHERE year = $1
+      ORDER BY nickname
+    `, [currentYear]);
+    
+    res.json({ success: true, users: result.rows });
+  } catch (error) {
+    console.error('Get admin users error:', error);
+    res.json({ success: false, error: 'Database error' });
+  }
+});
+
+// Get picks status for all users for a specific week
+app.get('/api/admin/picks-status/:weekId', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { weekId } = req.params;
+    const currentYear = new Date().getFullYear();
+    
+    // Get all users
+    const usersResult = await pool.query(`
+      SELECT id, nickname, realname
+      FROM pickers 
+      WHERE year = $1 AND active = 'y'
+      ORDER BY nickname
+    `, [currentYear]);
+    
+    // Get picks for this week
+    const picksResult = await pool.query(`
+      SELECT DISTINCT p.picker
+      FROM picks p
+      JOIN games g ON p.game = g.id
+      WHERE g.week = $1
+    `, [weekId]);
+    
+    const usersWithPicks = new Set(picksResult.rows.map(row => row.picker));
+    
+    const picksStatus = usersResult.rows.map(user => ({
+      id: user.id,
+      name: user.nickname || user.realname,
+      hasPicks: usersWithPicks.has(user.id)
+    }));
+    
+    res.json({ success: true, picksStatus });
+  } catch (error) {
+    console.error('Get picks status error:', error);
+    res.json({ success: false, error: 'Database error' });
+  }
+});
+
+// Get user's picks for a specific week (for admin to view/edit)
+app.get('/api/admin/user-picks/:userId/:weekId', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { userId, weekId } = req.params;
+    
+    const result = await pool.query(`
+      SELECT p.game, p.guess, p.weight
+      FROM picks p
+      JOIN games g ON p.game = g.id
+      WHERE g.week = $1 AND p.picker = $2
+    `, [weekId, userId]);
+    
+    res.json({ success: true, picks: result.rows });
+  } catch (error) {
+    console.error('Get user picks error:', error);
+    res.json({ success: false, error: 'Database error' });
+  }
+});
+
+// Submit picks for a user (admin override - can submit even after week started)
+app.post('/api/admin/user-picks/:userId/:weekId', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { userId, weekId } = req.params;
+    const picks = req.body;
+    
+    // Get games for this week
+    const gamesResult = await pool.query('SELECT id FROM games WHERE week = $1', [weekId]);
+    
+    // Validate picks
+    const gameIds = gamesResult.rows.map(g => g.id);
+    const usedValues = new Set();
+    const errors = [];
+    
+    gameIds.forEach(gameId => {
+      const pick = picks[`GAME${gameId}`];
+      const value = picks[`VAL${gameId}`];
+      
+      if (!pick) {
+        errors.push(`Missing pick for game ${gameId}`);
+      }
+      
+      if (!value || value === 0) {
+        errors.push(`Missing value for game ${gameId}`);
+      } else if (usedValues.has(value)) {
+        errors.push(`Value ${value} used multiple times`);
+      } else {
+        usedValues.add(value);
+      }
+    });
+    
+    if (errors.length > 0) {
+      return res.json({ success: false, error: errors.join('. ') });
+    }
+    
+    // Delete existing picks for this week
+    await pool.query(`
+      DELETE FROM picks 
+      WHERE picker = $1 AND game IN (SELECT id FROM games WHERE week = $2)
+    `, [userId, weekId]);
+    
+    // Insert new picks
+    for (const gameId of gameIds) {
+      const pick = picks[`GAME${gameId}`];
+      const value = picks[`VAL${gameId}`];
+      await pool.query(
+        'INSERT INTO picks (picker, game, guess, weight) VALUES ($1, $2, $3, $4)',
+        [userId, gameId, pick, value]
+      );
+    }
+    
+    res.json({ success: true, message: 'Picks saved successfully' });
+  } catch (error) {
+    console.error('Submit admin picks error:', error);
+    res.json({ success: false, error: 'Could not save picks' });
+  }
+});
+
+// Run update scripts
+app.post('/api/admin/run-script', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { scriptType } = req.body;
+    const { exec } = require('child_process');
+    
+    // Get script path from config
+    const scriptPath = scriptConfig.getScriptPath(scriptType);
+    console.log('Script path:', scriptPath);
+    
+    // Check if file exists
+    const fs = require('fs');
+    if (!fs.existsSync(scriptPath)) {
+      console.error('Script file does not exist:', scriptPath);
+      return res.json({ success: false, error: `Script file not found: ${scriptPath}` });
+    }
+    
+    // Execute the PHP script (original files use $CurYear variable)
+    // Quote the path to handle spaces in directory names
+    exec(`php "${scriptPath}"`, (error, stdout, stderr) => {
+      console.log('Script stdout:', stdout);
+      console.log('Script stderr:', stderr);
+      
+      if (error) {
+        console.error('Script execution error:', error);
+        return res.json({ 
+          success: false, 
+          error: `Script execution failed: ${error.message}`,
+          stdout: stdout,
+          stderr: stderr
+        });
+      }
+      
+      if (stderr) {
+        console.error('Script stderr:', stderr);
+        return res.json({ 
+          success: false, 
+          error: `Script error: ${stderr}`,
+          stdout: stdout
+        });
+      }
+      
+      res.json({ 
+        success: true, 
+        message: `${scriptType} script executed successfully`,
+        output: stdout
+      });
+    });
+    
+  } catch (error) {
+    console.error('Run script error:', error);
+    res.json({ success: false, error: `Could not run script: ${error.message}` });
   }
 });
 

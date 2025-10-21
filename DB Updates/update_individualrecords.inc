@@ -1,5 +1,12 @@
 
 <?php
+# DEBUG: Script started
+echo "DEBUG: Individual Records script started at " . date('Y-m-d H:i:s') . "\n";
+
+# Include database setup
+$CurYear = 2025;
+require_once '../sql.inc';
+
 #  Delete any existing data for this year
 $Sql = "DELETE from scores WHERE week in (select id FROM weeks WHERE year=$CurYear)";
 dbquery($Sql);
@@ -62,5 +69,8 @@ foreach ($result as $person) {
   $Sql = "INSERT INTO totalscore (picker, year, score, numright) VALUES ($Pid, $CurYear, $TotalScore, $TotalRight)";
   dbquery($Sql);
 }
+
+# DEBUG: Script completed
+echo "DEBUG: Individual Records script completed at " . date('Y-m-d H:i:s') . "\n";
 ?>
 

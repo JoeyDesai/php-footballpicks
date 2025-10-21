@@ -1,4 +1,11 @@
 <?php
+# DEBUG: Script started
+echo "DEBUG: Losers script started at " . date('Y-m-d H:i:s') . "\n";
+
+# Include database setup
+$CurYear = 2025;
+require_once '../sql.inc';
+
 #  Loop through each game, setting the losers as needed
 $Sql = "SELECT id, home, away, winner, loser FROM games WHERE winner is
 not null and winner = COALESCE(loser, winner)";
@@ -21,4 +28,7 @@ foreach ($result as $row) {
      dbquery($Sql);
    #}
 }
+
+# DEBUG: Script completed
+echo "DEBUG: Losers script completed at " . date('Y-m-d H:i:s') . "\n";
 ?>

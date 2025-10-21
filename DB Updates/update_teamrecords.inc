@@ -1,4 +1,11 @@
 <?php
+# DEBUG: Script started
+echo "DEBUG: Team Records script started at " . date('Y-m-d H:i:s') . "\n";
+
+# Include database setup
+$CurYear = 2025;
+require_once '../sql.inc';
+
 #  Loop through each team, updating records as needed
 $Sql = "SELECT id FROM teams";
 $result = dbquery($Sql);
@@ -21,4 +28,7 @@ w.year=$CurYear";
 id=$Team";
    dbquery($Sql);
 }
+
+# DEBUG: Script completed
+echo "DEBUG: Team Records script completed at " . date('Y-m-d H:i:s') . "\n";
 ?>
