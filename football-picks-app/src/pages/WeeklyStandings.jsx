@@ -29,20 +29,16 @@ function WeeklyStandings() {
   const [availableTags, setAvailableTags] = useState([
     { id: 0, name: 'All' }
   ]);
+  const [screenSize, setScreenSize] = useState(() => {
+    const width = window.innerWidth;
+    if (width <= 768) return 'mobile';
+    if (width <= 1024) return 'tablet';
+    return 'desktop';
+  });
 
-  // Sync horizontal scrolling between header and body
-  const handleHeaderScroll = (e) => {
-    const bodyContainer = document.querySelector('.full-body');
-    if (bodyContainer) {
-      bodyContainer.scrollLeft = e.target.scrollLeft;
-    }
-  };
-
+  // Single scroll handler for unified container
   const handleBodyScroll = (e) => {
-    const headerContainer = document.querySelector('.full-header-container');
-    if (headerContainer) {
-      headerContainer.scrollLeft = e.target.scrollLeft;
-    }
+    // No need for synchronization since header and body are in the same container
   };
 
 
@@ -55,9 +51,21 @@ function WeeklyStandings() {
       setAutoRefresh(true);
     }
 
-    // Handle window resize to adjust view mode
+    // Handle window resize to adjust screen size and view mode
     const handleResize = () => {
-      const isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const width = window.innerWidth;
+      let newScreenSize;
+      if (width <= 768) {
+        newScreenSize = 'mobile';
+      } else if (width <= 1024) {
+        newScreenSize = 'tablet';
+      } else {
+        newScreenSize = 'desktop';
+      }
+      setScreenSize(newScreenSize);
+      
+      // Update view mode based on screen size
+      const isMobile = width <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       const newViewMode = isMobile ? 'quick' : 'full';
       setViewMode(newViewMode);
     };
@@ -142,7 +150,7 @@ function WeeklyStandings() {
             });
             
             setStandings(sortedStandings);
-            setFullData(null);
+            setFullData(fullResponse.data);
           } else {
             setStandings(response.data.standings);
             setFullData(null);
@@ -200,97 +208,70 @@ function WeeklyStandings() {
     }
   };
 
-  const renderQuickView = () => (
-    <div className="table-container quick-table-container">
-      <div className="quick-header-container" onScroll={handleHeaderScroll}>
-        <div className="quick-header">
-          <div className="header-cell rank-header">#</div>
-          <div className="header-cell player-header">Player</div>
-          <div className="header-cell data-header">Correct</div>
-          <div className="header-cell data-header">Score</div>
-          <div className="header-cell data-header">
-            <span className="desktop-text">Potential</span>
-            <span className="mobile-text">Pot.</span>
-          </div>
-        </div>
-      </div>
-      <div className="quick-body-wrapper">
-        <div className="quick-body" onScroll={handleBodyScroll}>
-          {standings.map((player, index) => (
-          <div 
-            key={player.id} 
-            className={`quick-row ${player.id === user?.id ? 'current-user' : ''} ${selectedRows.includes(player.id) ? 'selected' : ''}`}
-            onClick={() => handleRowClick(player.id)}
-          >
-            <div className="table-cell rank">{index + 1}</div>
-            <div className="table-cell player-name">
-              <div className="player-info">
-                <span className="name">{player.nickname}</span>
-              </div>
-            </div>
-            <div className="table-cell correct">{formatNumber(player.numright)}</div>
-            <div className="table-cell score">{formatNumber(player.score)}</div>
-            <div className="table-cell potential">{formatNumber(player.potential_score || player.score)}</div>
-          </div>
-        ))}
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderFullView = () => {
+  // Desktop layout - full view with all games
+  const renderDesktopLayout = () => {
     if (!fullData) return null;
 
     const { games, picksByPicker } = fullData;
+    const gameColumns = games.map(() => '60px').join(' ');
+    const playerColumnMinWidth = 180;
+    const playerColumnWidth = Math.max(playerColumnMinWidth, 300 - (games.length * 60));
+    const gridTemplateColumns = `50px ${playerColumnWidth}px ${gameColumns} 70px 70px`;
+    
+    // Calculate total width for full-width highlighting
+    const totalWidth = 50 + playerColumnWidth + (games.length * 60) + 70 + 70;
 
     return (
-      <div className="table-container full-table-container">
-        <div className="full-header-container" onScroll={handleHeaderScroll}>
+      <div className="desktop-table-container">
+        <div className="div-scroll-container" onScroll={handleBodyScroll}>
           <div 
-            className="full-header"
-            style={{
-              gridTemplateColumns: `60px 200px repeat(${games.length}, 1fr) 60px 66px`
-            }}
+            className="desktop-header-container"
+            style={{ width: `${totalWidth}px` }}
           >
-            <div className="header-cell rank-header">#</div>
-            <div className="header-cell player-header">Player</div>
-            {games.map(game => (
-              <div key={game.id} className="header-cell game-header">
-                <div className="game-info">
-                  <div className="game-teams">
-                    <div className="away-team">{game.away_abbr}-</div>
-                    <div className="away-score">{game.awayscore || '-'}</div>
-                  </div>
-                  <div className="game-teams">
-                    <div className="home-team">{game.home_abbr}-</div>
-                    <div className="home-score">{game.homescore || '-'}</div>
-                  </div>
-                  <div className="game-status">
-                    {game.winner ? 'Final' : (game.time || 'TBD')}
+            <div 
+              className="div-header-row desktop-header"
+              style={{ gridTemplateColumns }}
+            >
+              <div className="div-header-cell rank-header">#</div>
+              <div className="div-header-cell player-header">Player</div>
+              {games.map(game => (
+                <div key={game.id} className="div-header-cell game-header">
+                  <div className="game-info">
+                    <div className="game-teams">
+                      <div className="away-team">{game.away_abbr}-</div>
+                      <div className="away-score">{game.awayscore || '-'}</div>
+                    </div>
+                    <div className="game-teams">
+                      <div className="home-team">{game.home_abbr}-</div>
+                      <div className="home-score">{game.homescore || '-'}</div>
+                    </div>
+                    <div className="game-status">
+                      {game.winner ? 'Final' : (game.time || 'TBD')}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-            <div className="header-cell total-header">Total</div>
-            <div className="header-cell potential-header">Potential</div>
+              ))}
+              <div className="div-header-cell total-header">Total</div>
+              <div className="div-header-cell potential-header">Potential</div>
+            </div>
           </div>
-        </div>
-        <div className="full-body" onScroll={handleBodyScroll}>
           {standings.map((player, index) => (
             <div 
               key={player.id} 
-              className={`full-row ${player.id === user?.id ? 'current-user' : ''} ${selectedRows.includes(player.id) ? 'selected' : ''}`}
+              className={`desktop-row-container ${player.id === user?.id ? 'current-user' : ''} ${selectedRows.includes(player.id) ? 'selected' : ''}`}
               onClick={() => handleRowClick(player.id)}
-              style={{
-                gridTemplateColumns: `60px 200px repeat(${games.length}, 1fr) 60px 60px`
-              }}
+              style={{ width: `${totalWidth}px` }}
             >
-              <div className="table-cell rank">
+              <div 
+                className="div-body-row desktop-row"
+                style={{ gridTemplateColumns }}
+              >
+              <div className="div-body-cell rank">
                 <div className="rank-display">
                   {index + 1}
                 </div>
               </div>
-              <div className="table-cell player-name">
+              <div className="div-body-cell player-name">
                 <div className="player-info">
                   <span className="name">{player.nickname}</span>
                 </div>
@@ -301,7 +282,7 @@ function WeeklyStandings() {
                 
                 if (!gamePick) {
                   return (
-                    <div key={game.id} className="table-cell game-data">
+                    <div key={game.id} className="div-body-cell game-data">
                       <div className="pick-display">-</div>
                     </div>
                   );
@@ -317,18 +298,400 @@ function WeeklyStandings() {
                 const pickWeight = gamePick.weight;
                 
                 return (
-                  <div key={game.id} className="table-cell game-data">
+                  <div key={game.id} className="div-body-cell game-data">
                     <div className={`pick-display ${isCorrect ? 'correct' : isWrong ? 'wrong' : isPending ? 'pending' : ''}`}>
                       {pickedTeam} {pickWeight}
                     </div>
                   </div>
                 );
               })}
-              <div className="table-cell total-column">
+              <div className="div-body-cell total-column">
                 <div className="total-score">{formatNumber(player.score)}</div>
               </div>
-              <div className="table-cell potential-column">
+              <div className="div-body-cell potential-column">
                 <div className="potential-score">{formatNumber(player.potential_score || player.score)}</div>
+              </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Desktop quick layout - summary view with full-width highlighting
+  const renderDesktopQuickLayout = () => {
+    // Calculate total width for desktop quick layout with flexible player column
+    const playerColumnMinWidth = 180;
+    const playerColumnWidth = Math.max(playerColumnMinWidth, 1000);
+    const totalWidth = 50 + playerColumnWidth + 100 + 100 + 100;
+    
+    return (
+      <div className="desktop-table-container">
+        <div className="div-scroll-container" onScroll={handleBodyScroll}>
+          <div 
+            className="desktop-header-container"
+            style={{ width: `${totalWidth}px` }}
+          >
+            <div 
+              className="div-header-row desktop-header"
+              style={{ gridTemplateColumns: `50px ${playerColumnWidth}px 100px 100px 100px` }}
+            >
+              <div className="div-header-cell rank-header">#</div>
+              <div className="div-header-cell player-header">Player</div>
+              <div className="div-header-cell data-header">Correct</div>
+              <div className="div-header-cell data-header">Score</div>
+              <div className="div-header-cell data-header">Potential</div>
+            </div>
+          </div>
+          {standings.map((player, index) => (
+            <div 
+              key={player.id} 
+              className={`desktop-row-container ${player.id === user?.id ? 'current-user' : ''} ${selectedRows.includes(player.id) ? 'selected' : ''}`}
+              onClick={() => handleRowClick(player.id)}
+              style={{ width: `${totalWidth}px` }}
+            >
+              <div 
+                className="div-body-row desktop-row"
+                style={{ gridTemplateColumns: `50px ${playerColumnWidth}px 100px 100px 100px` }}
+              >
+                <div className="div-body-cell rank">{index + 1}</div>
+                <div className="div-body-cell player-name">
+                  <div className="player-info">
+                    <span className="name">{player.nickname}</span>
+                  </div>
+                </div>
+                <div className="div-body-cell correct">{formatNumber(player.numright)}</div>
+                <div className="div-body-cell score">{formatNumber(player.score)}</div>
+                <div className="div-body-cell potential">{formatNumber(player.potential_score || player.score)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Tablet layout - quick view with fixed columns
+  const renderTabletLayout = () => {
+    // Calculate total width for tablet layout with flexible player column
+    const playerColumnMinWidth = 150;
+    const playerColumnWidth = Math.max(playerColumnMinWidth, 450);
+    const totalWidth = 40 + playerColumnWidth + 60 + 60 + 60;
+    
+    return (
+      <div className="tablet-table-container">
+        <div className="div-scroll-container" onScroll={handleBodyScroll}>
+          <div 
+            className="tablet-header-container"
+            style={{ width: `${totalWidth}px` }}
+          >
+            <div 
+              className="div-header-row tablet-header"
+              style={{ gridTemplateColumns: `40px ${playerColumnWidth}px 60px 60px 60px` }}
+            >
+              <div className="div-header-cell rank-header">#</div>
+              <div className="div-header-cell player-header">Player</div>
+              <div className="div-header-cell data-header">Correct</div>
+              <div className="div-header-cell data-header">Score</div>
+              <div className="div-header-cell data-header">Pot</div>
+            </div>
+          </div>
+          {standings.map((player, index) => (
+            <div 
+              key={player.id} 
+              className={`tablet-row-container ${player.id === user?.id ? 'current-user' : ''} ${selectedRows.includes(player.id) ? 'selected' : ''}`}
+              onClick={() => handleRowClick(player.id)}
+              style={{ width: `${totalWidth}px` }}
+            >
+              <div 
+                className="div-body-row tablet-row"
+                style={{ gridTemplateColumns: `40px ${playerColumnWidth}px 60px 60px 60px` }}
+              >
+                <div className="div-body-cell rank">{index + 1}</div>
+                <div className="div-body-cell player-name">
+                  <div className="player-info">
+                    <span className="name">{player.nickname}</span>
+                  </div>
+                </div>
+                <div className="div-body-cell correct">{formatNumber(player.numright)}</div>
+                <div className="div-body-cell score">{formatNumber(player.score)}</div>
+                <div className="div-body-cell potential">{formatNumber(player.potential_score || player.score)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Tablet full layout - full view with all games
+  const renderTabletFullLayout = () => {
+    if (!fullData) return null;
+
+    const { games, picksByPicker } = fullData;
+    const gameColumns = games.map(() => '45px').join(' ');
+    const playerColumnMinWidth = 160;
+    const playerColumnWidth = Math.max(playerColumnMinWidth, 250 - (games.length * 45));
+    const gridTemplateColumns = `40px ${playerColumnWidth}px ${gameColumns} 60px 70px`;
+    
+    // Calculate total width for tablet full layout - must match grid template exactly
+    const totalWidth = 40 + playerColumnWidth + (games.length * 45) + 60 + 70;
+
+    return (
+      <div className="tablet-table-container">
+        <div className="div-scroll-container" onScroll={handleBodyScroll}>
+          <div 
+            className="tablet-header-container"
+            style={{ width: `${totalWidth}px` }}
+          >
+            <div 
+              className="div-header-row tablet-header"
+              style={{ gridTemplateColumns }}
+            >
+              <div className="div-header-cell rank-header">#</div>
+              <div className="div-header-cell player-header">Player</div>
+              {games.map(game => (
+                <div key={game.id} className="div-header-cell game-header">
+                  <div className="game-info">
+                    <div className="game-teams">
+                      <div className="away-team">{game.away_abbr}-</div>
+                      <div className="away-score">{game.awayscore || '-'}</div>
+                    </div>
+                    <div className="game-teams">
+                      <div className="home-team">{game.home_abbr}-</div>
+                      <div className="home-score">{game.homescore || '-'}</div>
+                    </div>
+                    <div className="game-status">
+                      {game.winner ? 'Final' : (game.time || 'TBD')}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <div className="div-header-cell total-header">Total</div>
+              <div className="div-header-cell potential-header">Pot</div>
+            </div>
+          </div>
+          {standings.map((player, index) => (
+            <div 
+              key={player.id} 
+              className={`tablet-row-container ${player.id === user?.id ? 'current-user' : ''} ${selectedRows.includes(player.id) ? 'selected' : ''}`}
+              onClick={() => handleRowClick(player.id)}
+              style={{ width: `${totalWidth}px` }}
+            >
+              <div 
+                className="div-body-row tablet-row"
+                style={{ gridTemplateColumns }}
+              >
+                <div className="div-body-cell rank">
+                  <div className="rank-display">
+                    {index + 1}
+                  </div>
+                </div>
+                <div className="div-body-cell player-name">
+                  <div className="player-info">
+                    <span className="name">{player.nickname}</span>
+                  </div>
+                </div>
+                {games.map(game => {
+                  const playerPicks = picksByPicker[player.id];
+                  const gamePick = playerPicks ? playerPicks[game.id] : null;
+                  
+                  if (!gamePick) {
+                    return (
+                      <div key={game.id} className="div-body-cell game-data">
+                        <div className="pick-display">-</div>
+                      </div>
+                    );
+                  }
+
+                  const isAwayPick = gamePick.guess === gamePick.away;
+                  const isHomePick = gamePick.guess === gamePick.home;
+                  const isCorrect = gamePick.winner && gamePick.guess === gamePick.winner;
+                  const isWrong = gamePick.winner && gamePick.guess !== gamePick.winner;
+                  const isPending = !gamePick.winner;
+                  
+                  const pickedTeam = isAwayPick ? game.away_abbr : game.home_abbr;
+                  const pickWeight = gamePick.weight;
+                  
+                  return (
+                    <div key={game.id} className="div-body-cell game-data">
+                      <div className={`pick-display ${isCorrect ? 'correct' : isWrong ? 'wrong' : isPending ? 'pending' : ''}`}>
+                        {pickedTeam} {pickWeight}
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="div-body-cell total-column">
+                  <div className="total-score">{formatNumber(player.score)}</div>
+                </div>
+                <div className="div-body-cell potential-column">
+                  <div className="potential-score">{formatNumber(player.potential_score || player.score)}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Mobile layout - compact quick view
+  const renderMobileLayout = () => {
+    // Calculate total width for mobile layout with flexible player column
+    const playerColumnMinWidth = 80;
+    const playerColumnWidth = Math.max(playerColumnMinWidth, 120);
+    const totalWidth = 30 + playerColumnWidth + 45 + 45 + 45;
+    
+    return (
+      <div className="mobile-table-container">
+        <div className="div-scroll-container" onScroll={handleBodyScroll}>
+          <div 
+            className="mobile-header-container"
+            style={{ width: `${totalWidth}px` }}
+          >
+            <div 
+              className="div-header-row mobile-header"
+              style={{ gridTemplateColumns: `30px ${playerColumnWidth}px 45px 45px 45px` }}
+            >
+              <div className="div-header-cell rank-header">#</div>
+              <div className="div-header-cell player-header">Player</div>
+              <div className="div-header-cell data-header">Correct</div>
+              <div className="div-header-cell data-header">Score</div>
+              <div className="div-header-cell data-header">Pot.</div>
+            </div>
+          </div>
+          {standings.map((player, index) => (
+            <div 
+              key={player.id} 
+              className={`mobile-row-container ${player.id === user?.id ? 'current-user' : ''} ${selectedRows.includes(player.id) ? 'selected' : ''}`}
+              onClick={() => handleRowClick(player.id)}
+              style={{ width: `${totalWidth}px` }}
+            >
+              <div 
+                className="div-body-row mobile-row"
+                style={{ gridTemplateColumns: `30px ${playerColumnWidth}px 45px 45px 45px` }}
+              >
+                <div className="div-body-cell rank">{index + 1}</div>
+                <div className="div-body-cell player-name">
+                  <div className="player-info">
+                    <span className="name">{player.nickname}</span>
+                  </div>
+                </div>
+                <div className="div-body-cell correct">{formatNumber(player.numright)}</div>
+                <div className="div-body-cell score">{formatNumber(player.score)}</div>
+                <div className="div-body-cell potential">{formatNumber(player.potential_score || player.score)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Mobile full layout - full view with all games
+  const renderMobileFullLayout = () => {
+    if (!fullData) return null;
+
+    const { games, picksByPicker } = fullData;
+    const gameColumns = games.map(() => '35px').join(' ');
+    const playerColumnMinWidth = 90;
+    const playerColumnWidth = Math.max(playerColumnMinWidth, 150 - (games.length * 35));
+    const gridTemplateColumns = `25px ${playerColumnWidth}px ${gameColumns} 40px 40px`;
+    
+    // Calculate total width for mobile full layout
+    const totalWidth = 25 + playerColumnWidth + (games.length * 35) + 40 + 40;
+
+    return (
+      <div className="mobile-table-container">
+        <div className="div-scroll-container" onScroll={handleBodyScroll}>
+          <div 
+            className="mobile-header-container"
+            style={{ width: `${totalWidth}px` }}
+          >
+            <div 
+              className="div-header-row mobile-header"
+              style={{ gridTemplateColumns }}
+            >
+              <div className="div-header-cell rank-header">#</div>
+              <div className="div-header-cell player-header">Player</div>
+              {games.map(game => (
+                <div key={game.id} className="div-header-cell game-header">
+                  <div className="game-info">
+                    <div className="game-teams">
+                      <div className="away-team">{game.away_abbr}-</div>
+                      <div className="away-score">{game.awayscore || '-'}</div>
+                    </div>
+                    <div className="game-teams">
+                      <div className="home-team">{game.home_abbr}-</div>
+                      <div className="home-score">{game.homescore || '-'}</div>
+                    </div>
+                    <div className="game-status">
+                      {game.winner ? 'Final' : (game.time || 'TBD')}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <div className="div-header-cell total-header">Total</div>
+              <div className="div-header-cell potential-header">Pot.</div>
+            </div>
+          </div>
+          {standings.map((player, index) => (
+            <div 
+              key={player.id} 
+              className={`mobile-row-container ${player.id === user?.id ? 'current-user' : ''} ${selectedRows.includes(player.id) ? 'selected' : ''}`}
+              onClick={() => handleRowClick(player.id)}
+              style={{ width: `${totalWidth}px` }}
+            >
+              <div 
+                className="div-body-row mobile-row"
+                style={{ gridTemplateColumns }}
+              >
+                <div className="div-body-cell rank">
+                  <div className="rank-display">
+                    {index + 1}
+                  </div>
+                </div>
+                <div className="div-body-cell player-name">
+                  <div className="player-info">
+                    <span className="name">{player.nickname}</span>
+                  </div>
+                </div>
+                {games.map(game => {
+                  const playerPicks = picksByPicker[player.id];
+                  const gamePick = playerPicks ? playerPicks[game.id] : null;
+                  
+                  if (!gamePick) {
+                    return (
+                      <div key={game.id} className="div-body-cell game-data">
+                        <div className="pick-display">-</div>
+                      </div>
+                    );
+                  }
+
+                  const isAwayPick = gamePick.guess === gamePick.away;
+                  const isHomePick = gamePick.guess === gamePick.home;
+                  const isCorrect = gamePick.winner && gamePick.guess === gamePick.winner;
+                  const isWrong = gamePick.winner && gamePick.guess !== gamePick.winner;
+                  const isPending = !gamePick.winner;
+                  
+                  const pickedTeam = isAwayPick ? game.away_abbr : game.home_abbr;
+                  const pickWeight = gamePick.weight;
+                  
+                  return (
+                    <div key={game.id} className="div-body-cell game-data">
+                      <div className={`pick-display ${isCorrect ? 'correct' : isWrong ? 'wrong' : isPending ? 'pending' : ''}`}>
+                        {pickedTeam} {pickWeight}
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="div-body-cell total-column">
+                  <div className="total-score">{formatNumber(player.score)}</div>
+                </div>
+                <div className="div-body-cell potential-column">
+                  <div className="potential-score">{formatNumber(player.potential_score || player.score)}</div>
+                </div>
               </div>
             </div>
           ))}
@@ -431,7 +794,22 @@ function WeeklyStandings() {
         {loading ? (
           <div className="loading-spinner"></div>
         ) : standings.length > 0 ? (
-          viewMode === 'quick' ? renderQuickView() : renderFullView()
+          <>
+            {/* Desktop Layouts */}
+            <div className={`desktop-layout ${screenSize === 'desktop' ? 'active' : 'hidden'}`}>
+              {viewMode === 'full' ? renderDesktopLayout() : renderDesktopQuickLayout()}
+            </div>
+            
+            {/* Tablet Layouts */}
+            <div className={`tablet-layout ${screenSize === 'tablet' ? 'active' : 'hidden'}`}>
+              {viewMode === 'full' ? renderTabletFullLayout() : renderTabletLayout()}
+            </div>
+            
+            {/* Mobile Layouts */}
+            <div className={`mobile-layout ${screenSize === 'mobile' ? 'active' : 'hidden'}`}>
+              {viewMode === 'full' ? renderMobileFullLayout() : renderMobileLayout()}
+            </div>
+          </>
         ) : (
           <div className="no-data">
             <p>No standings data available for this week.</p>
@@ -609,7 +987,6 @@ function WeeklyStandings() {
           left: calc(50% - 2px);
         }
 
-
         .slider-track-labels {
           position: absolute;
           top: 0;
@@ -646,14 +1023,11 @@ function WeeklyStandings() {
           display: none;
         }
 
-
-
         .week-info {
           margin-bottom: 1rem;
           text-align: center;
           padding: 0.5rem 0;
         }
-
 
         .week-info h2 {
           color: white;
@@ -717,190 +1091,269 @@ function WeeklyStandings() {
           margin: 0 auto;
         }
 
-        .standings-table-container .table-container {
-          overflow: visible !important;
+        /* Layout visibility controls */
+        .desktop-layout,
+        .tablet-layout,
+        .mobile-layout {
+          display: none;
         }
 
-        .table-container {
+        .desktop-layout.active,
+        .tablet-layout.active,
+        .mobile-layout.active {
+          display: block;
+        }
+
+        /* Desktop Layout Styles */
+        .desktop-table-container {
           background: rgba(255, 255, 255, 0.05);
           backdrop-filter: blur(15px);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
           overflow: hidden;
-          width: 100%;
-        }
-
-        .quick-table-container {
-          width: 100%;
+          width: fit-content;
           max-width: 100%;
-          overflow: hidden;
+          margin: 0 auto;
+        }
+
+        .desktop-header {
+          display: grid;
+          position: sticky;
+          top: 0;
+          z-index: 10;
+          background: rgba(20, 22, 36, 0.75);
+          backdrop-filter: blur(20px);
+        }
+
+        .desktop-row {
+          display: grid;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          transition: background-color 0.2s ease;
+          cursor: pointer;
+        }
+
+        /* Full-width container styles for consistent highlighting */
+        .desktop-header-container,
+        .tablet-header-container,
+        .mobile-header-container {
+          width: 100%;
+          background: rgba(20, 22, 36, 0.75);
+          backdrop-filter: blur(20px);
+          position: sticky;
+          top: 0;
+          z-index: 10;
+        }
+
+        .desktop-row-container,
+        .tablet-row-container,
+        .mobile-row-container {
+          width: 100%;
+          transition: background-color 0.2s ease;
+          cursor: pointer;
           position: relative;
-          border-radius: 16px;
+        }
+
+
+        .desktop-row-container:hover,
+        .tablet-row-container:hover,
+        .mobile-row-container:hover {
+          background: rgba(255, 255, 255, 0.05);
+        }
+
+        .desktop-row-container.selected,
+        .tablet-row-container.selected,
+        .mobile-row-container.selected {
+          background: rgba(100, 150, 255, 0.1);
+          box-shadow: inset 0 0 0 1px rgba(100, 150, 255, 0.3);
+        }
+
+        .desktop-row-container.current-user,
+        .tablet-row-container.current-user,
+        .mobile-row-container.current-user {
+          background: rgba(255, 215, 0, 0.1);
+          box-shadow: inset 0 0 0 1px rgba(255, 215, 0, 0.3);
+        }
+
+        .desktop-row-container.current-user:hover,
+        .tablet-row-container.current-user:hover,
+        .mobile-row-container.current-user:hover {
+          background: rgba(255, 215, 0, 0.15);
+        }
+
+        .desktop-row-container.current-user.selected,
+        .tablet-row-container.current-user.selected,
+        .mobile-row-container.current-user.selected {
+          background: rgba(255, 215, 0, 0.2);
+          box-shadow: inset 0 0 0 1px rgba(255, 215, 0, 0.5);
+        }
+
+        /* Tablet Layout Styles */
+        .tablet-table-container {
           background: rgba(255, 255, 255, 0.05);
           backdrop-filter: blur(15px);
           border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .quick-header-container {
-          overflow-x: auto;
-          width: 100%;
-          background: rgba(255, 255, 255, 0.1);
-          backdrop-filter: blur(10px);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-          padding-right: 6px;
-          border-radius: 16px 16px 0 0;
-          margin-right: -6px;
-          box-sizing: border-box;
-        }
-
-        .quick-header-container::-webkit-scrollbar {
-          width: 6px;
-          height: 6px;
-        }
-
-        .quick-header-container::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 3px;
-        }
-
-        .quick-header-container::-webkit-scrollbar-thumb {
-          background: rgba(200, 200, 200, 0.4);
-          border-radius: 3px;
-          transition: all 0.3s ease;
-        }
-
-        .quick-header-container::-webkit-scrollbar-thumb:hover {
-          background: rgba(200, 200, 200, 0.6);
-        }
-
-        .quick-body-wrapper {
-          max-height: 70vh;
+          border-radius: 16px;
           overflow: hidden;
-          border-radius: 0 0 16px 16px;
+          width: fit-content;
+          max-width: 100%;
+          margin: 0 auto;
         }
 
-        .quick-body {
+        .tablet-table-container .div-scroll-container {
+          width: fit-content;
+          max-width: 100%;
+        }
+
+        /* Tablet pick display boxes - smaller */
+        @media (max-width: 1024px) and (min-width: 769px) {
+          .tablet-layout .pick-display {
+            padding: 0.05rem 0.1rem;
+            min-height: 0.8rem;
+            font-size: 0.5rem;
+          }
+        }
+
+        .tablet-header {
+          display: grid;
+          position: sticky;
+          top: 0;
+          z-index: 10;
+          background: rgba(20, 22, 36, 0.75);
+          backdrop-filter: blur(20px);
+        }
+
+        .tablet-row {
+          display: grid;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          transition: background-color 0.2s ease;
+          cursor: pointer;
+        }
+
+        /* Mobile Layout Styles */
+        .mobile-table-container {
+          background: rgba(255, 255, 255, 0.05);
+          backdrop-filter: blur(15px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
+          overflow: hidden;
+          width: fit-content;
+          max-width: 100%;
+          margin: 0 auto;
+        }
+
+        .mobile-header {
+          display: grid;
+          position: sticky;
+          top: 0;
+          z-index: 10;
+          background: rgba(20, 22, 36, 0.75);
+          backdrop-filter: blur(20px);
+        }
+
+        .mobile-row {
+          display: grid;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          transition: background-color 0.2s ease;
+          cursor: pointer;
+        }
+
+        /* Common table styles */
+        .div-scroll-container {
           max-height: 70vh;
           overflow-y: auto;
           overflow-x: auto;
-          width: 100%;
-          border-radius: 0 0 16px 16px;
-          margin-right: -6px;
-          padding-right: 6px;
-          box-sizing: border-box;
+          width: fit-content;
+          max-width: 100%;
+          border-radius: 16px;
         }
 
-        .quick-body::-webkit-scrollbar {
+        .div-scroll-container::-webkit-scrollbar {
           width: 6px;
           height: 6px;
         }
 
-        .quick-body::-webkit-scrollbar-track {
+        .div-scroll-container::-webkit-scrollbar-track {
           background: rgba(255, 255, 255, 0.05);
           border-radius: 3px;
         }
 
-        .quick-body::-webkit-scrollbar-thumb {
+        .div-scroll-container::-webkit-scrollbar-thumb {
           background: rgba(200, 200, 200, 0.4);
           border-radius: 3px;
           transition: all 0.3s ease;
         }
 
-        .quick-body::-webkit-scrollbar-thumb:hover {
+        .div-scroll-container::-webkit-scrollbar-thumb:hover {
           background: rgba(200, 200, 200, 0.6);
         }
 
-        .quick-body::-webkit-scrollbar-corner {
+        .div-scroll-container::-webkit-scrollbar-corner {
           background: transparent;
           border-radius: 0 0 16px 0;
         }
 
-        .quick-body::-webkit-scrollbar:vertical {
-          margin-bottom: 6px;
-        }
-
-        .quick-header {
+        .div-header-row {
           display: grid;
-          grid-template-columns: 50px 1fr 80px 80px 86px;
           min-width: 0;
+          width: 100%;
+          position: sticky;
+          top: 0;
+          z-index: 10;
+          background: rgba(20, 22, 36, 0.75);
+          backdrop-filter: blur(20px);
         }
 
-        .quick-header .header-cell {
+        .div-header-cell {
           border-right: 1px solid rgba(255, 255, 255, 0.1);
-          padding: 0.4rem 0.2rem;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          padding: 0.25rem 0.2rem;
           font-weight: 600;
           color: rgba(150, 200, 255, 1);
           text-align: center;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 1.1rem;
+          font-size: 0.9rem;
+          min-height: 32px;
         }
 
-        .quick-header .header-cell:last-child {
+        .div-header-cell:last-child {
           border-right: none;
         }
 
-        .quick-header .player-header {
+        .div-header-cell.player-header {
           text-align: left !important;
           justify-content: flex-start !important;
           padding-left: 5px;
         }
 
-
-
-        .quick-row {
+        .div-body-row {
           display: grid;
-          grid-template-columns: 50px 1fr 80px 80px 80px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-          transition: background-color 0.0s ease;
-          cursor: default;
           min-width: 0;
+          width: 100%;
+          position: relative;
         }
 
-
-        .quick-row:hover {
-          background: rgba(255, 255, 255, 0.05);
-        }
-
-        .quick-row.selected {
-          background: rgba(100, 150, 255, 0.1);
-          box-shadow: inset 0 0 0 1px rgba(100, 150, 255, 0.3);
-          transition: background-color 0.1s ease;
-        }
-
-        .quick-row.current-user {
-          background: rgba(255, 215, 0, 0.1);
-          box-shadow: inset 0 0 0 1px rgba(255, 215, 0, 0.3);
-          transition: background-color 0.1s ease;
-        }
-
-        .quick-row.current-user:hover {
-          background: rgba(255, 215, 0, 0.15);
-        }
-
-        .quick-row.current-user.selected {
-          background: rgba(255, 215, 0, 0.2);
-          box-shadow: inset 0 0 0 1px rgba(255, 215, 0, 0.5);
-        }
-
-        .quick-row .table-cell:last-child {
-          padding-right: 0px;
-          border-right: none;
-        }
-
-        .quick-row .table-cell {
+        .div-body-cell {
           border-right: 1px solid rgba(255, 255, 255, 0.1);
-          padding: 0.3rem 0.1rem;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          padding: 0.2rem 0.1rem;
           text-align: center;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 1.1rem;
+          font-size: 0.9rem;
           cursor: default;
+          min-height: 32px;
         }
 
-        .quick-row .table-cell.player-name {
+        .div-body-cell:last-child {
+          padding-right: 0px;
+          border-right: none;
+        }
+
+        .div-body-cell.player-name {
           text-align: left !important;
           justify-content: flex-start !important;
           padding-left: 5px;
@@ -908,7 +1361,7 @@ function WeeklyStandings() {
           overflow: hidden;
         }
 
-        .quick-row .table-cell.player-name .name {
+        .div-body-cell.player-name .name {
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -917,397 +1370,28 @@ function WeeklyStandings() {
           width: 100%;
         }
 
-        @media (max-width: 889px) {
-          .quick-header {
-            grid-template-columns: 35px 1fr 60px 60px 60px;
-          }
-
-          .quick-row {
-            grid-template-columns: 35px 1fr 60px 60px 60px;
-          }
-
-          .quick-header .header-cell,
-          .quick-row .table-cell {
-            font-size: 0.9rem;
-            padding: 0.25rem 0.1rem;
-          }
-
-          .quick-header .header-cell {
-            padding: 0.3rem 0.1rem;
-            font-size: 0.8rem;
-          }
-
-          .quick-row .table-cell.player-name .name {
-            max-width: 100%;
-            font-size: 0.9rem;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .quick-header {
-            grid-template-columns: 30px 1fr 55px 55px 55px;
-          }
-
-          .quick-row {
-            grid-template-columns: 30px 1fr 55px 55px 55px;
-          }
-
-          .quick-header .header-cell,
-          .quick-row .table-cell {
-            font-size: 0.85rem;
-            padding: 0.2rem 0.08rem;
-          }
-
-          .quick-header .header-cell {
-            padding: 0.25rem 0.08rem;
-            font-size: 0.75rem;
-          }
-
-          .quick-row .table-cell.player-name .name {
-            font-size: 0.85rem;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .quick-header {
-            grid-template-columns: 25px 1fr 45px 45px 45px;
-          }
-
-          .quick-row {
-            grid-template-columns: 25px 1fr 45px 45px 45px;
-          }
-
-          .quick-header .header-cell,
-          .quick-row .table-cell {
-            font-size: 0.8rem;
-            padding: 0.15rem 0.05rem;
-          }
-
-          .quick-header .header-cell {
-            padding: 0.2rem 0.05rem;
-            font-size: 0.7rem;
-          }
-
-          .quick-row .table-cell.player-name .name {
-            font-size: 0.8rem;
-          }
-        }
-
-        @media (max-width: 360px) {
-          .quick-header {
-            grid-template-columns: 20px 1fr 40px 40px 46px;
-          }
-
-          .quick-row {
-            grid-template-columns: 20px 1fr 40px 40px 40px;
-          }
-
-          .quick-header .header-cell,
-          .quick-row .table-cell {
-            font-size: 0.75rem;
-            padding: 0.1rem 0.03rem;
-          }
-
-          .quick-header .header-cell {
-            padding: 0.15rem 0.03rem;
-            font-size: 0.65rem;
-          }
-
-          .quick-row .table-cell.player-name .name {
-            font-size: 0.75rem;
-          }
-        }
-
-
-
-
-        .glass-table tbody tr {
-          cursor: pointer;
-          transition: all 0.3s ease;
-        }
-
-        .glass-table tbody tr:hover {
-          background: rgba(255, 255, 255, 0.05);
-        }
-
-        .glass-table tbody tr.selected {
-          background: rgba(100, 150, 255, 0.1);
-          border: 1px solid rgba(100, 150, 255, 0.3);
-        }
-
-        .glass-table tbody tr.current-user {
-          background: rgba(255, 215, 0, 0.1);
-          border: 1px solid rgba(255, 215, 0, 0.3);
-        }
-
-        .glass-table tbody tr.current-user:hover {
-          background: rgba(255, 215, 0, 0.15);
-        }
-
-        .glass-table tbody tr.current-user.selected {
-          background: rgba(255, 215, 0, 0.2);
-          border: 1px solid rgba(255, 215, 0, 0.5);
-        }
-
-        .rank {
-          font-weight: 600;
-          color: rgba(150, 200, 255, 1);
-        }
-
-        .player-name {
-          font-weight: 600;
-          text-align: left !important;
-        }
-
-        .player-info {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-        }
-
-        .name {
-          color: white;
-        }
-
-        .you-indicator {
-          background: rgba(100, 150, 255, 0.3);
-          color: rgba(150, 200, 255, 1);
-          padding: 0.25rem 0.5rem;
-          border-radius: 12px;
-          font-size: 0.75rem;
-          font-weight: 600;
-        }
-
-        .score {
-          font-weight: 700;
-          color: rgba(100, 150, 255, 1);
-          font-size: 1.1rem;
-        }
-
-        .correct {
-          color: rgba(150, 255, 150, 1);
-          font-weight: 600;
-        }
-
-        .potential {
-          color: rgba(255, 200, 100, 1);
-          font-weight: 600;
-        }
-
-        .no-data {
-          text-align: center;
-          padding: 3rem;
-          color: rgba(255, 255, 255, 0.6);
-        }
-
-
-        .full-table-container {
-          width: 100%;
-          max-width: 100%;
-          overflow: hidden;
-          position: relative;
-          border-radius: 16px;
-          background: rgba(255, 255, 255, 0.05);
-          backdrop-filter: blur(15px);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .full-body {
-          max-height: 70vh;
-          overflow-y: auto;
-          overflow-x: auto;
-          width: 100%;
-          border-radius: 0 0 16px 16px;
-          margin-right: -6px;
-          padding-right: 6px;
-          box-sizing: border-box;
-        }
-
-        .full-body::-webkit-scrollbar {
-          width: 6px;
-          height: 6px;
-        }
-
-
-        .full-body::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 3px;
-          margin: 0 0 0 0;
-        }
-
-        .full-body::-webkit-scrollbar-track:horizontal {
-          margin: 0 6px 0 6px;
-        }
-
-        .full-body::-webkit-scrollbar-thumb {
-          background: rgba(200, 200, 200, 0.4);
-          border-radius: 3px;
-          transition: all 0.3s ease;
-        }
-
-        .full-body::-webkit-scrollbar-thumb:hover {
-          background: rgba(200, 200, 200, 0.6);
-        }
-
-        .full-body::-webkit-scrollbar-corner {
-          background: transparent;
-          border-radius: 0 0 16px 0;
-          margin: 0 6px 0 0;
-        }
-
-        .full-grid {
-          display: grid;
-          gap: 0.05rem;
-          min-width: 600px;
-        }
-
-        .full-header-container {
-          overflow-x: auto;
-          width: 100%;
-          background: rgba(255, 255, 255, 0.1);
-          backdrop-filter: blur(10px);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-          padding-right: 6px;
-          border-radius: 16px 16px 0 0;
-          margin-right: -6px;
-          box-sizing: border-box;
-        }
-
-        .full-header-container::-webkit-scrollbar {
-          width: 0px;
-          height: 0px;
-        }
-
-        .full-header-container::-webkit-scrollbar-track {
-          background: transparent;
-        }
-
-        .full-header-container::-webkit-scrollbar-thumb {
-          background: transparent;
-        }
-
-        .full-header-container::-webkit-scrollbar-thumb:hover {
-          background: transparent;
-        }
-
-        .full-header {
-          display: grid;
-          gap: 0.05rem;
-          min-width: 100%;
-        }
-
-
-        .full-header .header-cell {
-          border-right: 1px solid rgba(255, 255, 255, 0.1);
-          padding: 0.4rem 0.2rem;
-          font-weight: 600;
-          color: rgba(150, 200, 255, 1);
-          text-align: center;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 0.8rem;
-        }
-
-        .full-header .header-cell:last-child {
-          border-right: none;
-        }
-
-        .full-header .player-header {
-          text-align: left !important;
-          justify-content: flex-start !important;
-        }
-
-        .full-row {
-          display: grid;
-          gap: 0.05rem;
-          min-width: 100%;
-          width: max-content;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-          transition: background-color 0.0s ease;
-          cursor: default;
-        }
-
-        .full-row:hover {
-          background: rgba(255, 255, 255, 0.05);
-        }
-
-
-        .full-row.selected {
-          background: rgba(100, 150, 255, 0.1);
-          box-shadow: inset 0 0 0 1px rgba(100, 150, 255, 0.3);
-          transition: background-color 0.1s ease;
-        }
-
-
-        .full-row.current-user {
-          background: rgba(255, 215, 0, 0.1);
-          box-shadow: inset 0 0 0 1px rgba(255, 215, 0, 0.3);
-          transition: background-color 0.1s ease;
-        }
-
-
-        .full-row.current-user:hover {
-          background: rgba(255, 215, 0, 0.15);
-        }
-
-
-        .full-row.current-user.selected {
-          background: rgba(255, 215, 0, 0.2);
-          box-shadow: inset 0 0 0 1px rgba(255, 215, 0, 0.5);
-        }
-
-
-        .full-row .table-cell:last-child {
-          padding-right: 0px;
-          border-right: none;
-        }
-
-        .full-row .table-cell {
-          border-right: 1px solid rgba(255, 255, 255, 0.1);
-          padding: 0.3rem 0.1rem;
-          text-align: center;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 0.8rem;
-          cursor: default;
-        }
-
-        .full-row .table-cell.player-name {
-          text-align: left !important;
-          justify-content: flex-start !important;
-          padding-left: 5px;
-        }
-
-        .full-header .player-header {
-          text-align: left !important;
-          justify-content: flex-start !important;
-          padding-left: 5px;
-        }
-
-        .player-name .name {
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          max-width: 100%;
-        }
-
-
-        .full-table thead {
-          position: sticky;
-          top: 0;
-          z-index: 10;
-        }
-
+        /* Game-specific styles */
         .game-header {
           min-width: 60px;
           text-align: center;
         }
 
-        .full-header .game-header,
-        .full-row .game-data {
-          min-width: 60px;
+        /* Tablet game columns */
+        .tablet-layout .game-header {
+          min-width: 45px;
+        }
+
+        .tablet-layout .game-data {
+          min-width: 45px;
+        }
+
+        /* Mobile game columns */
+        .mobile-layout .game-header {
+          min-width: 35px;
+        }
+
+        .mobile-layout .game-data {
+          min-width: 35px;
         }
 
         .game-info {
@@ -1323,7 +1407,7 @@ function WeeklyStandings() {
           gap: 0.05rem;
           font-weight: 600;
           color: rgba(150, 200, 255, 1);
-          font-size: 0.7rem;
+          font-size: 0.6rem;
         }
 
         .away-team {
@@ -1332,17 +1416,6 @@ function WeeklyStandings() {
 
         .home-team {
           color: rgba(150, 200, 255, 1);
-        }
-
-        .vs {
-          color: rgba(255, 255, 255, 0.6);
-          font-size: 0.8rem;
-        }
-
-        .game-scores {
-          display: flex;
-          gap: 0.5rem;
-          font-weight: 700;
         }
 
         .away-score {
@@ -1356,7 +1429,7 @@ function WeeklyStandings() {
         }
 
         .game-status {
-          font-size: 0.6rem;
+          font-size: 0.5rem;
           color: rgba(255, 255, 255, 0.6);
           font-weight: 500;
         }
@@ -1367,10 +1440,10 @@ function WeeklyStandings() {
         }
 
         .pick-display {
-          padding: 0.05rem 0.1rem;
+          padding: 0.1rem 0.15rem;
           border-radius: 2px;
           font-weight: 600;
-          min-height: 0.8rem;
+          min-height: 1.2rem;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1398,16 +1471,82 @@ function WeeklyStandings() {
           border: 1px solid rgba(255, 200, 100, 0.5);
         }
 
+        .rank {
+          font-weight: 600;
+          color: rgba(150, 200, 255, 1);
+        }
+
+        .player-name {
+          font-weight: 600;
+          text-align: left !important;
+        }
+
+        .player-info {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .name {
+          color: white;
+        }
+
+        .score {
+          font-weight: 700;
+          color: rgba(100, 150, 255, 1);
+        }
+
+        .correct {
+          color: rgba(150, 255, 150, 1);
+          font-weight: 600;
+        }
+
+        .potential {
+          color: rgba(255, 200, 100, 1);
+          font-weight: 600;
+        }
+
         .total-score {
-          font-size: 0.8rem;
+          font-size: 0.9rem;
           font-weight: 700;
           color: rgba(100, 150, 255, 1);
         }
 
         .potential-score {
-          font-size: 0.8rem;
+          font-size: 0.9rem;
           font-weight: 700;
           color: rgba(255, 200, 100, 1);
+        }
+
+        .no-data {
+          text-align: center;
+          padding: 3rem;
+          color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1024px) {
+          .desktop-layout {
+            display: none !important;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .tablet-layout {
+            display: none !important;
+          }
+        }
+
+        @media (min-width: 769px) {
+          .mobile-layout {
+            display: none !important;
+          }
+        }
+
+        @media (min-width: 1025px) {
+          .tablet-layout {
+            display: none !important;
+          }
         }
 
         @media (max-width: 889px) {
@@ -1445,69 +1584,6 @@ function WeeklyStandings() {
           .mobile-text {
             display: inline;
           }
-
-          .full-table-container {
-            min-width: 600px;
-            overflow-x: auto;
-            width: 100%;
-            max-width: 100%;
-          }
-
-          .standings-table-container {
-            overflow-x: auto;
-            width: 100%;
-            max-width: 100%;
-          }
-
-          .table-container {
-            overflow-x: auto;
-            width: 100%;
-            min-width: 100%;
-          }
-        }
-
-        @media (max-width: 889px) {
-          .standings-header {
-            padding: 1.25rem;
-          }
-          
-          .title-section h1 {
-            font-size: 1.75rem;
-            margin-bottom: 0.5rem;
-          }
-          
-          .controls {
-            gap: 0.75rem;
-          }
-          
-          .view-toggle,
-          .week-selector,
-          .tag-selector {
-            gap: 0.4rem;
-          }
-          
-          .view-toggle label,
-          .week-selector label,
-          .tag-selector label {
-            font-size: 0.8rem;
-            margin-bottom: 0.25rem;
-          }
-          
-          .toggle-button {
-            padding: 0.5rem 0.75rem;
-            font-size: 0.85rem;
-            min-height: 36px;
-          }
-          
-          .custom-dropdown {
-            min-width: 120px;
-          }
-          
-          .dropdown-trigger {
-            padding: 0.5rem 0.75rem;
-            font-size: 0.85rem;
-            min-height: 36px;
-          }
         }
 
         @media (max-width: 480px) {
@@ -1519,19 +1595,6 @@ function WeeklyStandings() {
             font-size: 1.5rem;
           }
           
-          .toggle-button {
-            padding: 0.45rem 0.6rem;
-            font-size: 0.8rem;
-            width: 80px;
-            min-height: 32px;
-          }
-          
-          .dropdown-trigger {
-            padding: 0.45rem 0.6rem;
-            font-size: 0.8rem;
-            min-height: 32px;
-          }
-
           .auto-refresh-button {
             padding: 0.45rem 0.6rem;
             font-size: 0.8rem;
@@ -1541,18 +1604,69 @@ function WeeklyStandings() {
           .slider-track {
             height: 32px;
           }
+        }
 
-          .slider-label {
-            font-size: 0.8rem;
+        /* Mobile-specific text sizing */
+        @media (max-width: 768px) {
+          .mobile-layout .div-header-cell,
+          .mobile-layout .div-header-row .div-header-cell {
+            font-size: 0.75rem;
+            padding: 0.15rem 0.1rem;
+            min-height: 24px !important;
           }
 
-
-          .full-table-container {
-            max-width: 100%;
+          .mobile-layout .div-body-cell,
+          .mobile-layout .div-body-row .div-body-cell {
+            font-size: 0.75rem;
+            padding: 0.15rem 0.05rem;
+            min-height: 24px !important;
           }
 
-          .standings-table-container {
-            max-width: 100%;
+          /* Mobile pick display boxes - smaller */
+          .mobile-layout .pick-display {
+            padding: 0.05rem 0.1rem;
+            min-height: 0.8rem;
+            font-size: 0.5rem;
+          }
+        }
+
+          .mobile-layout .game-teams {
+            font-size: 0.5rem;
+          }
+
+          .mobile-layout .game-status {
+            font-size: 0.4rem;
+          }
+
+          .mobile-layout .pick-display {
+            font-size: 0.4rem;
+            padding: 0.03rem 0.05rem;
+          }
+
+          .mobile-layout .total-score,
+          .mobile-layout .potential-score {
+            font-size: 0.75rem;
+          }
+
+          /* Mobile full view specific styling */
+          .mobile-layout .div-header-cell.rank-header,
+          .mobile-layout .div-header-cell.total-header,
+          .mobile-layout .div-header-cell.potential-header {
+            font-size: 0.65rem;
+          }
+
+          .mobile-layout .div-body-cell.rank,
+          .mobile-layout .div-body-cell.total-column,
+          .mobile-layout .div-body-cell.potential-column {
+            font-size: 0.65rem;
+          }
+
+          .mobile-layout .div-body-cell.player-name .name {
+            font-size: 0.7rem;
+          }
+
+          .mobile-layout .div-header-cell.player-header {
+            font-size: 0.7rem;
           }
         }
       `}</style>

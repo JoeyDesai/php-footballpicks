@@ -19,28 +19,18 @@ function OverallStandings() {
   const [loading, setLoading] = useState(true);
   const [selectedTag, setSelectedTag] = useState(0);
   const [viewMode, setViewMode] = useState(() => {
-    // Default to condensed view on mobile devices, classic view on desktop
+    // Default to quick view on mobile devices, full view on desktop
     const isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    return isMobile ? 'condensed' : 'classic';
-  }); // 'condensed' or 'classic'
-  const [selectedRow, setSelectedRow] = useState(null);
+    return isMobile ? 'quick' : 'full';
+  }); // 'quick' or 'full'
+  const [selectedRows, setSelectedRows] = useState([]);
   const [availableTags, setAvailableTags] = useState([
     { id: 0, name: 'All' }
   ]);
 
-  // Sync horizontal scrolling between header and body
-  const handleHeaderScroll = (e) => {
-    const bodyContainer = document.querySelector('.full-body');
-    if (bodyContainer) {
-      bodyContainer.scrollLeft = e.target.scrollLeft;
-    }
-  };
-
+  // Single scroll handler for unified container
   const handleBodyScroll = (e) => {
-    const headerContainer = document.querySelector('.full-header-container');
-    if (headerContainer) {
-      headerContainer.scrollLeft = e.target.scrollLeft;
-    }
+    // No need for synchronization since header and body are in the same container
   };
 
   useEffect(() => {
@@ -49,7 +39,7 @@ function OverallStandings() {
     // Handle window resize to adjust view mode
     const handleResize = () => {
       const isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      const newViewMode = isMobile ? 'condensed' : 'classic';
+      const newViewMode = isMobile ? 'quick' : 'full';
       setViewMode(newViewMode);
     };
 
@@ -75,10 +65,11 @@ function OverallStandings() {
   const loadStandings = async () => {
     try {
       setLoading(true);
-      if (viewMode === 'condensed') {
+      if (viewMode === 'quick') {
         const response = await statsAPI.getOverallStandings(selectedTag);
         if (response.data.success) {
           setStandings(response.data.standings);
+          setDetailedData(null);
         }
       } else {
         const response = await statsAPI.getOverallStandingsDetailed(selectedTag);
@@ -95,50 +86,60 @@ function OverallStandings() {
   };
 
   const handleRowClick = (playerId) => {
-    setSelectedRow(selectedRow === playerId ? null : playerId);
+    setSelectedRows(prev => {
+      if (prev.includes(playerId)) {
+        return prev.filter(id => id !== playerId);
+      } else {
+        return [...prev, playerId];
+      }
+    });
   };
 
-  const renderCondensedView = () => (
-    <div className="table-container quick-table-container">
-      <div className="quick-header-container" onScroll={handleHeaderScroll}>
-        <div className="quick-header">
-          <div className="header-cell rank-header">#</div>
-          <div className="header-cell player-header">Player</div>
-          <div className="header-cell data-header">Total Score</div>
-          <div className="header-cell data-header">Total Correct</div>
-          <div className="header-cell data-header">Average Week</div>
+  const renderQuickView = () => (
+    <div className="div-table-container quick-table-container">
+      <div className="div-scroll-container" onScroll={handleBodyScroll}>
+        <div 
+          className="div-header-row quick-header"
+          style={{
+            '--calculated-width': 'calc(100% + 6px)'
+          }}
+        >
+          <div className="div-header-cell rank-header">#</div>
+          <div className="div-header-cell player-header">Player</div>
+          <div className="div-header-cell data-header">Total Score</div>
+          <div className="div-header-cell data-header">Total Correct</div>
+          <div className="div-header-cell data-header">Average Week</div>
         </div>
-      </div>
-      <div className="quick-body-wrapper">
-        <div className="quick-body" onScroll={handleBodyScroll}>
-          {standings.map((player, index) => (
-          <div 
-            key={player.id} 
-            className={`quick-row ${player.id === user?.id ? 'current-user' : ''} ${selectedRow === player.id ? 'selected' : ''}`}
-            onClick={() => handleRowClick(player.id)}
-          >
-            <div className="table-cell rank">{index + 1}</div>
-            <div className="table-cell player-name">
-              <div className="player-info">
-                <span className="name">{player.nickname}</span>
-              </div>
-            </div>
-            <div className="table-cell score">{formatNumber(player.score || player.total_score)}</div>
-            <div className="table-cell correct">{formatNumber(player.numright || player.total_correct)}</div>
-            <div className="table-cell average">
-              {(player.weeks_played || 0) > 0 
-                ? formatNumber((player.score || player.total_score) / (player.weeks_played || 1))
-                : '0'
-              }
+        {standings.map((player, index) => (
+        <div 
+          key={player.id} 
+          className={`div-body-row quick-row ${player.id === user?.id ? 'current-user' : ''} ${selectedRows.includes(player.id) ? 'selected' : ''}`}
+          onClick={() => handleRowClick(player.id)}
+          style={{
+            '--calculated-width': 'calc(100% + 6px)'
+          }}
+        >
+          <div className="div-body-cell rank">{index + 1}</div>
+          <div className="div-body-cell player-name">
+            <div className="player-info">
+              <span className="name">{player.nickname}</span>
             </div>
           </div>
-        ))}
+          <div className="div-body-cell score">{formatNumber(player.score || player.total_score)}</div>
+          <div className="div-body-cell correct">{formatNumber(player.numright || player.total_correct)}</div>
+          <div className="div-body-cell average">
+            {(player.weeks_played || 0) > 0 
+              ? formatNumber((player.score || player.total_score) / (player.weeks_played || 1))
+              : '0'
+            }
+          </div>
         </div>
+      ))}
       </div>
     </div>
   );
 
-  const renderClassicView = () => {
+  const renderFullView = () => {
     if (!detailedData) return null;
 
     const allWeeks = detailedData.weeks || [];
@@ -149,53 +150,53 @@ function OverallStandings() {
     const weeks = allWeeks.sort((a, b) => b.number - a.number);
 
     return (
-      <div className="table-container full-table-container">
-        <div className="full-header-container" onScroll={handleHeaderScroll}>
+      <div className="div-table-container full-table-container">
+        <div className="div-scroll-container" onScroll={handleBodyScroll}>
           <div 
-            className="full-header"
+            className="div-header-row"
             style={{
-              gridTemplateColumns: `60px 250px 180px repeat(${weeks.length}, minmax(100px, 1fr)) 6px`,
-              '--week-count': weeks.length
+              gridTemplateColumns: `60px minmax(150px, 1fr) 180px repeat(${weeks.length}, 100px)`,
+              '--calculated-width': '100%',
+              '--weeks-count': weeks.length
             }}
           >
-            <div className="header-cell rank-header">#</div>
-            <div className="header-cell player-header">Player</div>
-            <div className="header-cell total-header">
+            <div className="div-header-cell rank-header">#</div>
+            <div className="div-header-cell player-header">Player</div>
+            <div className="div-header-cell total-header">
               <div className="total-column-header">
                 <div className="total-label">Total (# Correct)</div>
               </div>
             </div>
             {weeks.map(week => (
-              <div key={week.id} className="header-cell week-header">
+              <div key={week.id} className="div-header-cell week-header">
                 <div className="week-column">
                   <div className="week-number">Week {week.number}</div>
                 </div>
               </div>
             ))}
           </div>
-        </div>
-        <div className="full-body" onScroll={handleBodyScroll}>
           {standings.map((player, index) => (
             <div 
               key={player.id} 
-              className={`full-row ${player.id === user?.id ? 'current-user' : ''} ${selectedRow === player.id ? 'selected' : ''}`}
+              className={`div-body-row ${player.id === user?.id ? 'current-user' : ''} ${selectedRows.includes(player.id) ? 'selected' : ''}`}
               onClick={() => handleRowClick(player.id)}
               style={{
-                gridTemplateColumns: `60px 250px 180px repeat(${weeks.length}, minmax(100px, 1fr))`,
-                '--week-count': weeks.length
+                gridTemplateColumns: `60px minmax(150px, 1fr) 180px repeat(${weeks.length}, 100px)`,
+                '--calculated-width': '100%',
+                '--weeks-count': weeks.length
               }}
             >
-              <div className="table-cell rank">
+              <div className="div-body-cell rank">
                 <div className="rank-display">
                   {index + 1}
                 </div>
               </div>
-              <div className="table-cell player-name">
+              <div className="div-body-cell player-name">
                 <div className="player-info">
                   <span className="name">{player.nickname}</span>
                 </div>
               </div>
-              <div className="table-cell total-column">
+              <div className="div-body-cell total-column">
                 <div className="total-score-display">
                   <div className="total-score">{formatNumber(player.total_score || player.score)}</div>
                   <div className="total-correct">({formatNumber(player.total_correct || player.numright)})</div>
@@ -204,7 +205,7 @@ function OverallStandings() {
               {weeks.map(week => {
                 const weekData = weeklyScores[player.id]?.[week.number] || { score: 0, correct: 0 };
                 return (
-                  <div key={week.id} className="table-cell week-data">
+                  <div key={week.id} className="div-body-cell week-data">
                     <div className="week-score-display">
                       <div className="week-score">{formatNumber(weekData.score)}</div>
                       <div className="week-correct">({formatNumber(weekData.correct)})</div>
@@ -231,15 +232,15 @@ function OverallStandings() {
             <div className="view-toggle">
               <label htmlFor="view-toggle">View</label>
               <div className="slider-container">
-                <div className="slider-track" onClick={() => setViewMode(viewMode === 'condensed' ? 'classic' : 'condensed')}>
-                  <div className={`slider-thumb ${viewMode === 'classic' ? 'slider-thumb-right' : 'slider-thumb-left'}`}>
+                <div className="slider-track" onClick={() => setViewMode(viewMode === 'quick' ? 'full' : 'quick')}>
+                  <div className={`slider-thumb ${viewMode === 'full' ? 'slider-thumb-right' : 'slider-thumb-left'}`}>
                   </div>
                   <div className="slider-track-labels">
-                    <span className={`track-label ${viewMode === 'condensed' ? 'track-label-active' : 'track-label-inactive'}`}>
+                    <span className={`track-label ${viewMode === 'quick' ? 'track-label-active' : 'track-label-inactive'}`}>
                       <span className="desktop-text">Quick View</span>
                       <span className="mobile-text">Quick</span>
                     </span>
-                    <span className={`track-label ${viewMode === 'classic' ? 'track-label-active' : 'track-label-inactive'}`}>
+                    <span className={`track-label ${viewMode === 'full' ? 'track-label-active' : 'track-label-inactive'}`}>
                       <span className="desktop-text">Full View</span>
                       <span className="mobile-text">Full</span>
                     </span>
@@ -272,7 +273,7 @@ function OverallStandings() {
         {loading ? (
           <div className="loading-spinner"></div>
         ) : standings.length > 0 ? (
-          viewMode === 'condensed' ? renderCondensedView() : renderClassicView()
+          viewMode === 'quick' ? renderQuickView() : renderFullView()
         ) : (
           <div className="no-data">
             <Trophy className="no-data-icon" />
@@ -317,6 +318,7 @@ function OverallStandings() {
           max-width: 2000px;
           margin: 0 auto;
           padding: 0 1rem;
+          width: 100%;
         }
 
         /* Override main-content max-width for this page */
@@ -325,7 +327,7 @@ function OverallStandings() {
         }
 
         .standings-header {
-          margin-bottom: 2rem;
+          margin-bottom: 1.5rem;
         }
 
         .header-content {
@@ -335,18 +337,11 @@ function OverallStandings() {
           align-items: center;
         }
 
-        @media (min-width: 890px) {
-          .header-content {
-            flex-direction: row;
-            justify-content: space-between;
-            align-items: center;
-            gap: 2rem;
-          }
-        }
-
         .title-section {
           display: flex;
           align-items: center;
+          justify-content: center;
+          width: 100%;
         }
 
         .title-section h1 {
@@ -354,6 +349,7 @@ function OverallStandings() {
           font-weight: 700;
           color: white;
           margin: 0;
+          text-align: center;
         }
 
         .controls {
@@ -366,8 +362,8 @@ function OverallStandings() {
         @media (min-width: 890px) {
           .controls {
             grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
-            width: auto;
+            gap: 1.5rem;
+            width: 100%;
           }
         }
 
@@ -375,6 +371,7 @@ function OverallStandings() {
           .controls {
             grid-template-columns: repeat(2, auto);
             gap: 1.5rem;
+            width: auto;
           }
         }
 
@@ -383,6 +380,27 @@ function OverallStandings() {
           display: flex;
           flex-direction: column;
           gap: 0.5rem;
+        }
+
+        /* Z-index stacking for dropdowns */
+        .view-toggle .custom-dropdown {
+          z-index: 300 !important;
+        }
+
+        .view-toggle .custom-dropdown .dropdown-menu {
+          z-index: 300 !important;
+        }
+
+        .tag-selector .custom-dropdown {
+          z-index: 320 !important;
+        }
+
+        .tag-selector .custom-dropdown .dropdown-menu {
+          z-index: 320 !important;
+        }
+
+        .custom-dropdown {
+          width: 180px !important;
         }
 
         .view-toggle label,
@@ -494,7 +512,7 @@ function OverallStandings() {
         .season-info h2 {
           color: white;
           font-size: 1.5rem;
-          margin-bottom: 0.5rem;
+          margin: 0;
           font-weight: 600;
         }
 
@@ -502,7 +520,19 @@ function OverallStandings() {
           color: rgba(255, 255, 255, 0.7);
         }
 
-        .table-container {
+        .standings-table-container {
+          overflow: visible !important;
+          width: 100%;
+          position: relative;
+          z-index: 1;
+          margin: 0 auto;
+        }
+
+        .standings-table-container .table-container {
+          overflow: visible !important;
+        }
+
+        .div-table-container {
           background: rgba(255, 255, 255, 0.05);
           backdrop-filter: blur(15px);
           border: 1px solid rgba(255, 255, 255, 0.1);
@@ -522,93 +552,89 @@ function OverallStandings() {
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .quick-header-container {
-          overflow-x: auto;
-          width: 100%;
-          background: rgba(255, 255, 255, 0.1);
-          backdrop-filter: blur(10px);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-          padding-right: 6px;
-          border-radius: 16px 16px 0 0;
-          margin-right: -6px;
-          box-sizing: border-box;
-        }
-
-        .quick-header-container::-webkit-scrollbar {
-          width: 6px;
-          height: 6px;
-        }
-
-        .quick-header-container::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 3px;
-        }
-
-        .quick-header-container::-webkit-scrollbar-thumb {
-          background: rgba(200, 200, 200, 0.4);
-          border-radius: 3px;
-          transition: all 0.3s ease;
-        }
-
-        .quick-header-container::-webkit-scrollbar-thumb:hover {
-          background: rgba(200, 200, 200, 0.6);
-        }
-
-        .quick-body-wrapper {
-          max-height: 70vh;
-          overflow: hidden;
-          border-radius: 0 0 16px 16px;
-        }
-
-        .quick-body {
+        .div-scroll-container {
           max-height: 70vh;
           overflow-y: auto;
           overflow-x: auto;
           width: 100%;
-          border-radius: 0 0 16px 16px;
+          border-radius: 16px;
           margin-right: -6px;
           padding-right: 6px;
           box-sizing: border-box;
         }
 
-        .quick-body::-webkit-scrollbar {
+        .div-scroll-container::-webkit-scrollbar {
           width: 6px;
           height: 6px;
         }
 
-        .quick-body::-webkit-scrollbar-track {
+        .div-scroll-container::-webkit-scrollbar-track {
           background: rgba(255, 255, 255, 0.05);
           border-radius: 3px;
         }
 
-        .quick-body::-webkit-scrollbar-thumb {
+        .div-scroll-container::-webkit-scrollbar-thumb {
           background: rgba(200, 200, 200, 0.4);
           border-radius: 3px;
           transition: all 0.3s ease;
         }
 
-        .quick-body::-webkit-scrollbar-thumb:hover {
+        .div-scroll-container::-webkit-scrollbar-thumb:hover {
           background: rgba(200, 200, 200, 0.6);
         }
 
-        .quick-body::-webkit-scrollbar-corner {
+        .div-scroll-container::-webkit-scrollbar-corner {
           background: transparent;
           border-radius: 0 0 16px 0;
         }
 
-        .quick-body::-webkit-scrollbar:vertical {
+        .div-scroll-container::-webkit-scrollbar:vertical {
           margin-bottom: 6px;
         }
 
-        .quick-header {
+        .div-header-row {
           display: grid;
-          grid-template-columns: 50px 1fr 80px 80px 86px;
           min-width: 0;
+          width: 100%;
+          position: sticky;
+          top: 0;
+          z-index: 10;
         }
 
-        .quick-header .header-cell {
+        .div-header-row::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(20, 22, 36, 0.75);
+          backdrop-filter: blur(20px);
+          z-index: -1;
+          width: var(--calculated-width, 100%);
+        }
+
+        .div-header-row.quick-header {
+          grid-template-columns: 50px 1fr 80px 80px 80px;
+        }
+
+        .div-header-row.quick-header::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(20, 22, 36, 0.75);
+          backdrop-filter: blur(20px);
+          z-index: -1;
+          width: var(--calculated-width, 100%);
+        }
+
+        .div-header-cell {
           border-right: 1px solid rgba(255, 255, 255, 0.1);
-          padding: 0.4rem 0.2rem;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          padding: 0.25rem 0.2rem;
           font-weight: 600;
           color: rgba(150, 200, 255, 1);
           text-align: center;
@@ -616,69 +642,122 @@ function OverallStandings() {
           align-items: center;
           justify-content: center;
           font-size: 1.1rem;
+          min-height: 32px;
         }
 
-        .quick-header .header-cell:last-child {
+        .div-header-cell:last-child {
           border-right: none;
         }
 
-        .quick-header .player-header {
+        .div-header-cell.player-header {
           text-align: left !important;
           justify-content: flex-start !important;
           padding-left: 5px;
         }
 
-        .quick-row {
+        .div-body-row {
           display: grid;
-          grid-template-columns: 50px 1fr 80px 80px 80px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.05);
           transition: background-color 0.0s ease;
           cursor: default;
           min-width: 0;
+          width: 100%;
+          position: relative;
         }
 
-        .quick-row:hover {
+        .div-body-row::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          z-index: -1;
+          transition: background-color 0.0s ease;
+          width: var(--calculated-width, 100%);
+        }
+
+        .div-body-row:hover::before {
           background: rgba(255, 255, 255, 0.05);
         }
 
-        .quick-row.selected {
+        .div-body-row.selected::before {
           background: rgba(100, 150, 255, 0.1);
           box-shadow: inset 0 0 0 1px rgba(100, 150, 255, 0.3);
-          transition: background-color 0.1s ease;
         }
 
-        .quick-row.current-user {
+        .div-body-row.current-user::before {
           background: rgba(255, 215, 0, 0.1);
           box-shadow: inset 0 0 0 1px rgba(255, 215, 0, 0.3);
-          transition: background-color 0.1s ease;
         }
 
-        .quick-row.current-user:hover {
+        .div-body-row.current-user:hover::before {
           background: rgba(255, 215, 0, 0.15);
         }
 
-        .quick-row.current-user.selected {
+        .div-body-row.current-user.selected::before {
           background: rgba(255, 215, 0, 0.2);
           box-shadow: inset 0 0 0 1px rgba(255, 215, 0, 0.5);
         }
 
-        .quick-row .table-cell:last-child {
+        .div-body-row.quick-row {
+          grid-template-columns: 50px 1fr 80px 80px 80px;
+        }
+
+        .div-body-row.quick-row::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          z-index: -1;
+          transition: background-color 0.0s ease;
+          width: var(--calculated-width, 100%);
+        }
+
+        .div-body-row.quick-row:hover::before {
+          background: rgba(255, 255, 255, 0.05);
+        }
+
+        .div-body-row.quick-row.selected::before {
+          background: rgba(100, 150, 255, 0.1);
+          box-shadow: inset 0 0 0 1px rgba(100, 150, 255, 0.3);
+        }
+
+        .div-body-row.quick-row.current-user::before {
+          background: rgba(255, 215, 0, 0.1);
+          box-shadow: inset 0 0 0 1px rgba(255, 215, 0, 0.3);
+        }
+
+        .div-body-row.quick-row.current-user:hover::before {
+          background: rgba(255, 215, 0, 0.15);
+        }
+
+        .div-body-row.quick-row.current-user.selected::before {
+          background: rgba(255, 215, 0, 0.2);
+          box-shadow: inset 0 0 0 1px rgba(255, 215, 0, 0.5);
+        }
+
+        .div-body-cell:last-child {
           padding-right: 0px;
           border-right: none;
         }
 
-        .quick-row .table-cell {
+        .div-body-cell {
           border-right: 1px solid rgba(255, 255, 255, 0.1);
-          padding: 0.3rem 0.1rem;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          padding: 0.2rem 0.1rem;
           text-align: center;
           display: flex;
           align-items: center;
           justify-content: center;
           font-size: 1.1rem;
           cursor: default;
+          min-height: 32px;
         }
 
-        .quick-row .table-cell.player-name {
+        .div-body-cell.player-name {
           text-align: left !important;
           justify-content: flex-start !important;
           padding-left: 5px;
@@ -686,19 +765,10 @@ function OverallStandings() {
           overflow: hidden;
         }
 
-        .quick-row .table-cell.player-name .name {
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          max-width: 100%;
-          display: block;
-          width: 100%;
-        }
 
         .rank {
           font-weight: 600;
           color: rgba(150, 200, 255, 1);
-          font-size: 1.1rem;
         }
 
         .player-name {
@@ -719,326 +789,21 @@ function OverallStandings() {
         .score {
           font-weight: 700;
           color: rgba(100, 150, 255, 1);
-          font-size: 1.1rem;
         }
 
         .correct {
           color: rgba(150, 255, 150, 1);
           font-weight: 600;
-          font-size: 1.1rem;
         }
 
         .average {
           color: rgba(255, 200, 100, 1);
           font-weight: 600;
-          font-size: 1.1rem;
-        }
-
-        @media (max-width: 889px) {
-          .quick-header {
-            grid-template-columns: 35px 1fr 60px 60px 66px;
-          }
-
-          .quick-row {
-            grid-template-columns: 35px 1fr 60px 60px 60px;
-          }
-
-          .quick-header .header-cell,
-          .quick-row .table-cell {
-            font-size: 0.9rem;
-            padding: 0.25rem 0.1rem;
-          }
-
-          .quick-header .header-cell {
-            padding: 0.3rem 0.1rem;
-            font-size: 0.8rem;
-          }
-
-          .quick-row .table-cell.player-name .name {
-            max-width: 100%;
-            font-size: 0.9rem;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .quick-header {
-            grid-template-columns: 30px 1fr 55px 55px 61px;
-          }
-
-          .quick-row {
-            grid-template-columns: 30px 1fr 55px 55px 55px;
-          }
-
-          .quick-header .header-cell,
-          .quick-row .table-cell {
-            font-size: 0.85rem;
-            padding: 0.2rem 0.08rem;
-          }
-
-          .quick-header .header-cell {
-            padding: 0.25rem 0.08rem;
-            font-size: 0.75rem;
-          }
-
-          .quick-row .table-cell.player-name .name {
-            font-size: 0.85rem;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .quick-header {
-            grid-template-columns: 25px 1fr 45px 45px 45px;
-          }
-
-          .quick-row {
-            grid-template-columns: 25px 1fr 45px 45px 45px;
-          }
-
-          .quick-header .header-cell,
-          .quick-row .table-cell {
-            font-size: 0.8rem;
-            padding: 0.15rem 0.05rem;
-          }
-
-          .quick-header .header-cell {
-            padding: 0.2rem 0.05rem;
-            font-size: 0.7rem;
-          }
-
-          .quick-row .table-cell.player-name .name {
-            font-size: 0.8rem;
-          }
-        }
-
-        @media (max-width: 360px) {
-          .quick-header {
-            grid-template-columns: 20px 1fr 40px 40px 46px;
-          }
-
-          .quick-row {
-            grid-template-columns: 20px 1fr 40px 40px 40px;
-          }
-
-          .quick-header .header-cell,
-          .quick-row .table-cell {
-            font-size: 0.75rem;
-            padding: 0.1rem 0.03rem;
-          }
-
-          .quick-header .header-cell {
-            padding: 0.15rem 0.03rem;
-            font-size: 0.65rem;
-          }
-
-          .quick-row .table-cell.player-name .name {
-            font-size: 0.75rem;
-          }
-        }
-
-        .standings-table-container {
-          overflow: visible !important;
-          margin-bottom: 2rem;
-          position: relative;
-          z-index: 1;
-        }
-
-        .standings-table-container .table-container {
-          overflow: visible !important;
-        }
-
-        /* Ensure dropdowns in header appear above table container */
-        .standings-header {
-          position: relative;
-          z-index: 100 !important;
-        }
-
-        .standings-header .custom-dropdown {
-          position: relative;
-          z-index: 200 !important;
-        }
-
-        .standings-header .custom-dropdown .dropdown-menu {
-          position: absolute;
-          z-index: 200 !important;
-        }
-
-        /* Force header above table container */
-        .standings-header.glass-container {
-          position: relative;
-          z-index: 100 !important;
-        }
-
-        .scrollable-table {
-          width: 100%;
-          max-height: 70vh;
-          overflow-y: auto;
-          display: block;
-        }
-
-        .scrollable-table thead {
-          display: block;
-          position: sticky;
-          top: 0;
-          z-index: 10;
-          background: rgba(0, 0, 0, 0.8);
-          backdrop-filter: blur(20px);
-          border-radius: 16px 16px 0 0;
-        }
-
-        .scrollable-table tbody {
-          display: block;
-          overflow-y: auto;
-        }
-
-        .scrollable-table tr {
-          display: table;
-          width: 100%;
-          table-layout: fixed;
-        }
-
-        .glass-table th {
-          text-align: center;
-          font-weight: 600;
-          color: rgba(150, 200, 255, 1);
-          padding: 0.5rem 0.5rem;
-        }
-
-        .player-header {
-          text-align: left !important;
-        }
-
-        .glass-table td {
-          text-align: center;
-          padding: 0.5rem 0.5rem;
-          vertical-align: middle;
-        }
-
-        .glass-table tbody tr {
-          cursor: pointer;
-          transition: all 0.3s ease;
-        }
-
-        .glass-table tbody tr:hover {
-          background: rgba(255, 255, 255, 0.05);
-        }
-
-        .glass-table tbody tr.selected {
-          background: rgba(100, 150, 255, 0.1);
-          border: 1px solid rgba(100, 150, 255, 0.3);
-        }
-
-        .glass-table tbody tr.current-user {
-          background: rgba(255, 215, 0, 0.1);
-          border: 1px solid rgba(255, 215, 0, 0.3);
-        }
-
-        .glass-table tbody tr.current-user:hover {
-          background: rgba(255, 215, 0, 0.15);
-        }
-
-        .glass-table tbody tr.current-user.selected {
-          background: rgba(255, 215, 0, 0.2);
-          border: 1px solid rgba(255, 215, 0, 0.5);
-        }
-
-        .rank {
-          font-weight: 600;
-        }
-
-        .rank-display {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 0.5rem;
-          font-size: 1.1rem;
-          color: rgba(150, 200, 255, 1);
-          font-weight: 600;
-        }
-
-        .trophy-icon {
-          color: rgba(255, 215, 0, 1);
-          width: 20px;
-          height: 20px;
-        }
-
-        .player-name {
-          text-align: left !important;
-        }
-
-        .player-info {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-        }
-
-        .name {
-          font-weight: 600;
-          color: white;
-          font-size: 1.1rem;
-        }
-
-        .you-indicator {
-          background: rgba(100, 150, 255, 0.3);
-          color: rgba(150, 200, 255, 1);
-          padding: 0.25rem 0.5rem;
-          border-radius: 12px;
-          font-size: 0.75rem;
-          font-weight: 600;
-        }
-
-
-        .average {
-          color: rgba(255, 200, 100, 1);
-          font-weight: 600;
-        }
-
-
-        .week-header {
-          min-width: 80px;
-        }
-
-        .week-column {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-        }
-
-        .week-number {
-          font-weight: 700;
-          color: rgba(150, 200, 255, 1);
-          margin-bottom: 0.25rem;
-        }
-
-        .week-subheaders {
-          display: flex;
-          gap: 0.5rem;
-        }
-
-        .subheader {
-          font-size: 0.75rem;
-          color: rgba(255, 255, 255, 0.7);
-          font-weight: 500;
-        }
-
-        .week-data {
-          min-width: 80px;
-        }
-
-        .week-score {
-          font-weight: 600;
-          color: rgba(100, 150, 255, 1);
-          margin-bottom: 0.25rem;
-        }
-
-        .week-correct {
-          font-size: 0.9rem;
-          color: rgba(150, 255, 150, 1);
-          font-weight: 500;
         }
 
         .no-data {
           text-align: center;
-          padding: 4rem 2rem;
+          padding: 3rem;
           color: rgba(255, 255, 255, 0.6);
         }
 
@@ -1053,132 +818,6 @@ function OverallStandings() {
           margin-bottom: 0.5rem;
         }
 
-        .stats-summary {
-          text-align: center;
-        }
-
-        .stats-summary h3 {
-          color: white;
-          font-size: 1.5rem;
-          margin-bottom: 1.5rem;
-        }
-
-        .stats-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 1.5rem;
-        }
-
-        @media (min-width: 768px) {
-          .stats-grid {
-            grid-template-columns: repeat(4, 1fr);
-          }
-        }
-
-        .stat-item {
-          text-align: center;
-        }
-
-        .stat-value {
-          font-size: 2rem;
-          font-weight: 700;
-          color: rgba(100, 150, 255, 1);
-          margin-bottom: 0.5rem;
-        }
-
-        .stat-label {
-          color: rgba(255, 255, 255, 0.7);
-          font-size: 0.9rem;
-          font-weight: 500;
-        }
-
-        @media (max-width: 889px) {
-          .header-content {
-            flex-direction: column;
-            align-items: center;
-            gap: 1rem;
-          }
-
-          .title-section {
-            text-align: center;
-            width: 100%;
-          }
-
-          .title-section h1 {
-            font-size: 2rem;
-          }
-
-          .controls {
-            grid-template-columns: 1fr;
-            gap: 1rem;
-            width: 100%;
-            max-width: 100%;
-          }
-
-          .slider-container {
-            width: 100%;
-            max-width: 100%;
-          }
-
-          .custom-dropdown {
-            width: 100% !important;
-            max-width: 100%;
-          }
-
-          .desktop-text {
-            display: none;
-          }
-
-          .mobile-text {
-            display: inline;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .title-section h1 {
-            font-size: 1.75rem;
-          }
-          
-          .controls {
-            justify-content: center;
-          }
-
-          .classic-table-wrapper {
-            min-width: 1000px;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .title-section h1 {
-            font-size: 1.5rem;
-          }
-        }
-
-        .scrollable-table::-webkit-scrollbar {
-          width: 8px;
-          height: 8px;
-        }
-
-        .scrollable-table::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 4px;
-        }
-
-        .scrollable-table::-webkit-scrollbar-thumb {
-          background: rgba(100, 150, 255, 0.5);
-          border-radius: 4px;
-          transition: all 0.3s ease;
-        }
-
-        .scrollable-table::-webkit-scrollbar-thumb:hover {
-          background: rgba(100, 150, 255, 0.7);
-        }
-
-        .scrollable-table::-webkit-scrollbar-corner {
-          background: rgba(255, 255, 255, 0.1);
-        }
-
-        /* Full table container styles */
         .full-table-container {
           width: 100%;
           max-width: 100%;
@@ -1190,177 +829,100 @@ function OverallStandings() {
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .full-body {
-          max-height: 70vh;
-          overflow-y: auto;
-          overflow-x: auto;
-          width: 100%;
-          border-radius: 0 0 16px 16px;
-          margin-right: -6px;
-          padding-right: 6px;
-          box-sizing: border-box;
-        }
-
-        .full-body::-webkit-scrollbar {
-          width: 6px;
-          height: 6px;
-        }
-
-        .full-body::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 3px;
-          margin: 0 0 0 0;
-        }
-
-        .full-body::-webkit-scrollbar-track:horizontal {
-          margin: 0 6px 0 6px;
-        }
-
-        .full-body::-webkit-scrollbar-thumb {
-          background: rgba(200, 200, 200, 0.4);
-          border-radius: 3px;
-          transition: all 0.3s ease;
-        }
-
-        .full-body::-webkit-scrollbar-thumb:hover {
-          background: rgba(200, 200, 200, 0.6);
-        }
-
-        .full-body::-webkit-scrollbar-corner {
-          background: transparent;
-          border-radius: 0 0 16px 0;
-          margin: 0 6px 0 0;
-        }
-
-        .full-header-container {
-          overflow-x: auto;
-          width: 100%;
-          background: rgba(255, 255, 255, 0.1);
-          backdrop-filter: blur(10px);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-          padding-right: 6px;
-          border-radius: 16px 16px 0 0;
-          margin-right: -6px;
-          box-sizing: border-box;
-          white-space: nowrap;
-        }
-
-        .full-header-container::-webkit-scrollbar {
-          width: 0px;
-          height: 0px;
-        }
-
-        .full-header-container::-webkit-scrollbar-track {
-          background: transparent;
-        }
-
-        .full-header-container::-webkit-scrollbar-thumb {
-          background: transparent;
-        }
-
-        .full-header-container::-webkit-scrollbar-thumb:hover {
-          background: transparent;
-        }
-
-        .full-header {
+        .div-header-row:not(.quick-header) {
           display: grid;
+          gap: 0.05rem;
           min-width: 100%;
-          width: max-content;
-          white-space: nowrap;
+          width: 100%;
         }
 
-        .full-header .header-cell {
+        .div-body-row:not(.quick-row) {
+          display: grid;
+          gap: 0.05rem;
+          min-width: 100%;
+          width: 100%;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          transition: background-color 0.0s ease;
+          cursor: default;
+          position: relative;
+        }
+
+        .div-body-row:not(.quick-row)::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          z-index: -1;
+          transition: background-color 0.0s ease;
+          width: var(--calculated-width, 100%);
+        }
+
+        .div-body-row:not(.quick-row):hover::before {
+          background: rgba(255, 255, 255, 0.05);
+        }
+
+        .div-body-row:not(.quick-row).selected::before {
+          background: rgba(100, 150, 255, 0.1);
+          box-shadow: inset 0 0 0 1px rgba(100, 150, 255, 0.3);
+        }
+
+        .div-body-row:not(.quick-row).current-user::before {
+          background: rgba(255, 215, 0, 0.1);
+          box-shadow: inset 0 0 0 1px rgba(255, 215, 0, 0.3);
+        }
+
+        .div-body-row:not(.quick-row).current-user:hover::before {
+          background: rgba(255, 215, 0, 0.15);
+        }
+
+        .div-body-row:not(.quick-row).current-user.selected::before {
+          background: rgba(255, 215, 0, 0.2);
+          box-shadow: inset 0 0 0 1px rgba(255, 215, 0, 0.5);
+        }
+
+        .div-header-cell:not(.quick-header .div-header-cell) {
           border-right: 1px solid rgba(255, 255, 255, 0.1);
-          padding: 0.4rem 0.2rem;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          padding: 0.25rem 0.2rem;
           font-weight: 600;
           color: rgba(150, 200, 255, 1);
           text-align: center;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 1.1rem;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
+          font-size: 0.8rem;
+          min-height: 32px;
         }
 
-        .full-header .header-cell:last-child {
-          border-right: none;
-        }
-
-        .full-header .player-header {
-          text-align: left !important;
-          justify-content: flex-start !important;
-        }
-
-
-        .full-row {
-          display: grid;
-          min-width: 100%;
-          width: max-content;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-          transition: background-color 0.0s ease;
-          cursor: default;
-          white-space: nowrap;
-        }
-
-        .full-row:hover {
-          background: rgba(255, 255, 255, 0.05);
-        }
-
-        .full-row.selected {
-          background: rgba(100, 150, 255, 0.1);
-          box-shadow: inset 0 0 0 1px rgba(100, 150, 255, 0.3);
-          transition: background-color 0.1s ease;
-        }
-
-        .full-row.current-user {
-          background: rgba(255, 215, 0, 0.1);
-          box-shadow: inset 0 0 0 1px rgba(255, 215, 0, 0.3);
-          transition: background-color 0.1s ease;
-        }
-
-        .full-row.current-user:hover {
-          background: rgba(255, 215, 0, 0.15);
-        }
-
-        .full-row.current-user.selected {
-          background: rgba(255, 215, 0, 0.2);
-          box-shadow: inset 0 0 0 1px rgba(255, 215, 0, 0.5);
-        }
-
-        .full-row .table-cell:last-child {
-          padding-right: 0px;
-          border-right: none;
-        }
-
-        .full-row .table-cell {
+        .div-body-cell:not(.quick-row .div-body-cell) {
           border-right: 1px solid rgba(255, 255, 255, 0.1);
-          padding: 0.3rem 0.1rem;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          padding: 0.2rem 0.1rem;
           text-align: center;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 1.1rem;
+          font-size: 0.8rem !important;
           cursor: default;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
+          min-height: 32px;
         }
 
-        .full-row .table-cell.player-name {
+        .div-body-cell:not(.quick-row .div-body-cell).player-name {
+          text-align: left !important;
+          justify-content: flex-start !important;
+          padding-left: 5px;
+          font-size: 1.1rem !important;
+        }
+
+        .div-header-cell:not(.quick-header .div-header-cell).player-header {
           text-align: left !important;
           justify-content: flex-start !important;
           padding-left: 5px;
         }
 
-        .full-header .player-header {
-          text-align: left !important;
-          justify-content: flex-start !important;
-          padding-left: 5px;
-        }
-
-        .player-name .name {
+        .div-body-cell.player-name .name {
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -1442,26 +1004,153 @@ function OverallStandings() {
           line-height: 1;
         }
 
+        .rank-display {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          font-size: 1.1rem;
+          color: rgba(150, 200, 255, 1);
+          font-weight: 600;
+        }
+
+        .stats-summary {
+          text-align: center;
+          margin-top: 1.5rem;
+        }
+
+        .stats-summary h3 {
+          color: white;
+          font-size: 1.5rem;
+          margin-bottom: 1.5rem;
+        }
+
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 1.5rem;
+        }
+
+        @media (min-width: 768px) {
+          .stats-grid {
+            grid-template-columns: repeat(4, 1fr);
+          }
+        }
+
+        .stat-item {
+          text-align: center;
+        }
+
+        .stat-value {
+          font-size: 2rem;
+          font-weight: 700;
+          color: rgba(100, 150, 255, 1);
+          margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+          color: rgba(255, 255, 255, 0.7);
+          font-size: 0.9rem;
+          font-weight: 500;
+        }
+
+        /* Default: Use 1fr for player column to fill available space with minimum width */
+        .div-header-row:not(.quick-header) {
+          grid-template-columns: 60px minmax(150px, 1fr) 180px repeat(var(--weeks-count), 100px) !important;
+          --calculated-width: 100% !important;
+        }
+        
+        .div-body-row:not(.quick-row) {
+          grid-template-columns: 60px minmax(150px, 1fr) 180px repeat(var(--weeks-count), 100px) !important;
+          --calculated-width: 100% !important;
+        }
+
+        /* Tablet/small desktop screens - ensure proper behavior */
+        @media (min-width: 768px) and (max-width: 1024px) {
+          .div-header-row:not(.quick-header) {
+            grid-template-columns: 60px minmax(150px, 1fr) 180px repeat(var(--weeks-count), 100px) !important;
+            --calculated-width: 100% !important;
+          }
+          
+          .div-body-row:not(.quick-row) {
+            grid-template-columns: 60px minmax(150px, 1fr) 180px repeat(var(--weeks-count), 100px) !important;
+            --calculated-width: 100% !important;
+          }
+        }
+
+        /* When viewport is smaller than content, use fixed widths */
+        @media (max-width: 767px) {
+          .div-header-row:not(.quick-header) {
+            grid-template-columns: 60px 150px 180px repeat(var(--weeks-count), 100px) !important;
+            --calculated-width: calc(60px + 150px + 180px + (var(--weeks-count) * 100px) + 15px) !important;
+          }
+          
+          .div-body-row:not(.quick-row) {
+            grid-template-columns: 60px 150px 180px repeat(var(--weeks-count), 100px) !important;
+            --calculated-width: calc(60px + 150px + 180px + (var(--weeks-count) * 100px) + 15px) !important;
+          }
+        }
 
         @media (max-width: 889px) {
-          .full-header .header-cell,
-          .full-row .table-cell {
+          .div-header-row.quick-header {
+            grid-template-columns: 35px 1fr 60px 60px 60px;
+          }
+
+          .div-body-row.quick-row {
+            grid-template-columns: 35px 1fr 60px 60px 60px;
+          }
+
+          /* Ensure full view works on tablet screens */
+          .div-header-row:not(.quick-header) {
+            grid-template-columns: 60px minmax(150px, 1fr) 180px repeat(var(--weeks-count), 100px) !important;
+            --calculated-width: 100% !important;
+          }
+          
+          .div-body-row:not(.quick-row) {
+            grid-template-columns: 60px minmax(150px, 1fr) 180px repeat(var(--weeks-count), 100px) !important;
+            --calculated-width: 100% !important;
+          }
+
+          .div-header-cell,
+          .div-body-cell {
             font-size: 0.9rem;
             padding: 0.25rem 0.1rem;
           }
 
-          .full-header .header-cell {
+          .div-header-cell {
             padding: 0.3rem 0.1rem;
             font-size: 0.8rem;
           }
 
-          .full-row .table-cell.player-name .name {
+          .div-body-cell.player-name .name {
             max-width: 100%;
-            font-size: 0.9rem;
           }
 
-          .rank, .score, .correct, .average, .week-score, .week-correct, .total-score, .total-correct, .rank-display {
-            font-size: 0.9rem;
+          .title-section h1 {
+            font-size: 2rem;
+          }
+          
+          .controls {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+          }
+
+          .slider-container {
+            width: 100%;
+            max-width: 180px;
+          }
+
+          .custom-dropdown {
+            width: 100% !important;
+            max-width: 180px;
+          }
+
+          .desktop-text {
+            display: none;
+          }
+
+          .mobile-text {
+            display: inline;
           }
 
           .full-table-container {
@@ -1477,110 +1166,86 @@ function OverallStandings() {
             max-width: 100%;
           }
 
-          .table-container {
+          .div-table-container {
             overflow-x: auto;
             width: 100%;
             min-width: 100%;
           }
 
-          /* Override grid columns for mobile */
-          .full-header {
-            grid-template-columns: 40px 180px 140px repeat(var(--week-count, 1), minmax(70px, 1fr)) 6px !important;
-          }
-
-          .full-row {
-            grid-template-columns: 40px 180px 140px repeat(var(--week-count, 1), minmax(70px, 1fr)) !important;
-          }
         }
 
         @media (max-width: 768px) {
-          .full-header .header-cell,
-          .full-row .table-cell {
+          .div-header-row.quick-header {
+            grid-template-columns: 30px 1fr 55px 55px 55px;
+          }
+
+          .div-body-row.quick-row {
+            grid-template-columns: 30px 1fr 55px 55px 55px;
+          }
+
+          .div-header-cell,
+          .div-body-cell {
             font-size: 0.85rem;
             padding: 0.2rem 0.08rem;
           }
 
-          .full-header .header-cell {
+          .div-header-cell {
             padding: 0.25rem 0.08rem;
             font-size: 0.75rem;
           }
 
-          .full-row .table-cell.player-name .name {
-            font-size: 0.85rem;
-          }
 
-          .rank, .score, .correct, .average, .week-score, .week-correct, .total-score, .total-correct, .rank-display {
-            font-size: 0.85rem;
-          }
-
-          /* Override grid columns for mobile */
-          .full-header {
-            grid-template-columns: 35px 150px 120px repeat(var(--week-count, 1), minmax(60px, 1fr)) 6px !important;
-          }
-
-          .full-row {
-            grid-template-columns: 35px 150px 120px repeat(var(--week-count, 1), minmax(60px, 1fr)) !important;
+          .title-section h1 {
+            font-size: 1.75rem;
           }
         }
 
         @media (max-width: 480px) {
-          .full-header .header-cell,
-          .full-row .table-cell {
+          .div-header-row.quick-header {
+            grid-template-columns: 25px 1fr 45px 45px 45px;
+          }
+
+          .div-body-row.quick-row {
+            grid-template-columns: 25px 1fr 45px 45px 45px;
+          }
+
+          .div-header-cell,
+          .div-body-cell {
             font-size: 0.8rem;
             padding: 0.15rem 0.05rem;
           }
 
-          .full-header .header-cell {
+          .div-header-cell {
             padding: 0.2rem 0.05rem;
             font-size: 0.7rem;
           }
 
-          .full-row .table-cell.player-name .name {
-            font-size: 0.8rem;
-          }
 
-          .rank, .score, .correct, .average, .week-score, .week-correct, .total-score, .total-correct, .rank-display {
-            font-size: 0.8rem;
-          }
-
-          /* Override grid columns for mobile */
-          .full-header {
-            grid-template-columns: 30px 120px 100px repeat(var(--week-count, 1), minmax(50px, 1fr)) 6px !important;
-          }
-
-          .full-row {
-            grid-template-columns: 30px 120px 100px repeat(var(--week-count, 1), minmax(50px, 1fr)) !important;
+          .title-section h1 {
+            font-size: 1.5rem;
           }
         }
 
         @media (max-width: 360px) {
-          .full-header .header-cell,
-          .full-row .table-cell {
+          .div-header-row.quick-header {
+            grid-template-columns: 20px 1fr 40px 40px 40px;
+          }
+
+          .div-body-row.quick-row {
+            grid-template-columns: 20px 1fr 40px 40px 40px;
+          }
+
+          .div-header-cell,
+          .div-body-cell {
             font-size: 0.75rem;
             padding: 0.1rem 0.03rem;
           }
 
-          .full-header .header-cell {
+          .div-header-cell {
             padding: 0.15rem 0.03rem;
             font-size: 0.65rem;
           }
 
-          .full-row .table-cell.player-name .name {
-            font-size: 0.75rem;
-          }
-
-          .rank, .score, .correct, .average, .week-score, .week-correct, .total-score, .total-correct, .rank-display {
-            font-size: 0.75rem;
-          }
-
-          /* Override grid columns for mobile */
-          .full-header {
-            grid-template-columns: 25px 100px 90px repeat(var(--week-count, 1), minmax(40px, 1fr)) 6px !important;
-          }
-
-          .full-row {
-            grid-template-columns: 25px 100px 90px repeat(var(--week-count, 1), minmax(40px, 1fr)) !important;
-          }
         }
       `}</style>
     </div>
