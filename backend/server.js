@@ -995,6 +995,79 @@ app.post('/api/admin/run-script', requireAuth, requireAdmin, async (req, res) =>
   }
 });
 
+// Get all available tags (for admin)
+app.get('/api/admin/tags', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT id, name 
+      FROM tags 
+      ORDER BY name
+    `);
+    
+    res.json({ success: true, tags: result.rows });
+  } catch (error) {
+    console.error('Get all tags error:', error);
+    res.json({ success: false, error: 'Database error' });
+  }
+});
+
+// Get user's tags (for admin)
+app.get('/api/admin/user-tags/:userId', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const result = await pool.query(`
+      SELECT t.id, t.name 
+      FROM tags t, pickertags p 
+      WHERE p.pickerid = $1 AND p.tagid = t.id 
+      ORDER BY t.name
+    `, [userId]);
+    
+    res.json({ success: true, tags: result.rows });
+  } catch (error) {
+    console.error('Get user tags error:', error);
+    res.json({ success: false, error: 'Database error' });
+  }
+});
+
+// Update user's tags (for admin)
+app.post('/api/admin/user-tags/:userId', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { tagIds } = req.body;
+    
+    // Start transaction
+    await pool.query('BEGIN');
+    
+    try {
+      // Remove all existing tags for this user
+      await pool.query('DELETE FROM pickertags WHERE pickerid = $1', [userId]);
+      
+      // Add new tags
+      if (tagIds && tagIds.length > 0) {
+        for (const tagId of tagIds) {
+          await pool.query(
+            'INSERT INTO pickertags (pickerid, tagid) VALUES ($1, $2)',
+            [userId, tagId]
+          );
+        }
+      }
+      
+      // Commit transaction
+      await pool.query('COMMIT');
+      
+      res.json({ success: true, message: 'User tags updated successfully' });
+    } catch (error) {
+      // Rollback on error
+      await pool.query('ROLLBACK');
+      throw error;
+    }
+  } catch (error) {
+    console.error('Update user tags error:', error);
+    res.json({ success: false, error: 'Database error' });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

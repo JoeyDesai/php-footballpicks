@@ -1631,3 +1631,142 @@ body.iphone-pwa .header {
     font-size: 0.75rem;
   }
 }
+
+/* Assign Tags Styles */
+.assign-tags-interface {
+  margin-top: 1rem;
+}
+
+.selected-user-info {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.selected-user-info h3 {
+  color: white;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.tags-container {
+  padding: 1.5rem;
+}
+
+.tags-header {
+  margin-bottom: 1.5rem;
+}
+
+.tags-header h4 {
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+}
+
+.tags-header p {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.tags-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.tag-item {
+  display: flex;
+  align-items: center;
+}
+
+.tag-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.tag-checkbox:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(100, 150, 255, 0.3);
+}
+
+.tag-checkbox input[type="checkbox"] {
+  display: none;
+}
+
+.checkbox-mark {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  background: transparent;
+  position: relative;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.tag-checkbox input[type="checkbox"]:checked + .checkbox-mark {
+  background: rgba(100, 150, 255, 0.8);
+  border-color: rgba(100, 150, 255, 1);
+}
+
+.tag-checkbox input[type="checkbox"]:checked + .checkbox-mark::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 2px;
+  width: 6px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.tag-name {
+  color: white;
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+.no-user-selected {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.no-user-selected p {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+/* Responsive adjustments for assign tags */
+@media (max-width: 768px) {
+  .tags-container {
+    padding: 1rem;
+  }
+  
+  .tag-checkbox {
+    padding: 0.6rem;
+  }
+  
+  .tag-name {
+    font-size: 0.9rem;
+  }
+  
+  .selected-user-info h3 {
+    font-size: 1.1rem;
+  }
+}

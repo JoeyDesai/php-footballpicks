@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Users, Database, CheckCircle, XCircle, Search, Play, Save } from 'lucide-react';
+import { Settings, Users, Database, CheckCircle, XCircle, Search, Play, Save, Tag } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { gameAPI, statsAPI, adminAPI } from '../services/api';
 import CustomDropdown from '../components/CustomDropdown';
@@ -20,6 +20,11 @@ function Admin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  
+  // Assign Tags state
+  const [allTags, setAllTags] = useState([]);
+  const [userTags, setUserTags] = useState([]);
+  const [selectedTags, setSelectedTags] = useState([]);
 
   // Update script paths - easily configurable for deployment
   const updateScriptPaths = {
@@ -34,6 +39,7 @@ function Admin() {
     }
     loadWeeks();
     loadUsers();
+    loadAllTags();
   }, [isAdmin]);
 
   useEffect(() => {
@@ -82,6 +88,28 @@ function Admin() {
     } catch (error) {
       console.error('Error loading users:', error);
       setError('Failed to load users');
+    }
+  };
+
+  const loadAllTags = async () => {
+    try {
+      const response = await adminAPI.getAllTags();
+      setAllTags(response.data.tags || []);
+    } catch (error) {
+      console.error('Error loading tags:', error);
+      setError('Failed to load tags');
+    }
+  };
+
+  const loadUserTags = async (userId) => {
+    try {
+      const response = await adminAPI.getUserTags(userId);
+      const userTagIds = response.data.tags.map(tag => tag.id);
+      setUserTags(response.data.tags);
+      setSelectedTags(userTagIds);
+    } catch (error) {
+      console.error('Error loading user tags:', error);
+      setError('Failed to load user tags');
     }
   };
 
@@ -153,6 +181,11 @@ function Admin() {
     setSelectedUser(user);
     setUserSearch(user.nickname || user.realname || user.email || '');
     setShowUserDropdown(false);
+    
+    // Load user tags when user is selected in assign tags mode
+    if (activePanel === 'assign-tags') {
+      loadUserTags(user.id);
+    }
   };
 
   const handleUserSearchFocus = () => {
@@ -201,6 +234,33 @@ function Admin() {
     } catch (error) {
       console.error(`Error running ${scriptType} script:`, error);
       setError(`Failed to run ${scriptType} script`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTagToggle = (tagId) => {
+    setSelectedTags(prev => {
+      if (prev.includes(tagId)) {
+        return prev.filter(id => id !== tagId);
+      } else {
+        return [...prev, tagId];
+      }
+    });
+  };
+
+  const saveUserTags = async () => {
+    if (!selectedUser) return;
+    
+    setLoading(true);
+    try {
+      await adminAPI.updateUserTags(selectedUser.id, selectedTags);
+      setSuccess('User tags updated successfully');
+      // Reload user tags to reflect changes
+      loadUserTags(selectedUser.id);
+    } catch (error) {
+      console.error('Error saving user tags:', error);
+      setError('Failed to save user tags');
     } finally {
       setLoading(false);
     }
@@ -318,6 +378,8 @@ function Admin() {
                 <h2>Week {selectedWeek ? weeks.find(w => w.id === selectedWeek)?.number : ''}</h2>
               </div>
             </div>
+            
+            <div className="games-spacing"></div>
             
             {loading ? (
               <div className="loading-spinner"></div>
@@ -496,6 +558,114 @@ function Admin() {
     </div>
   );
 
+  const renderAssignTags = () => (
+    <div className="admin-panel">
+      <div className="admin-panel-header">
+        <h2>Assign Tags to User</h2>
+        <div className="user-search-container">
+          <div className="user-dropdown-wrapper">
+            <div className="search-input">
+              <Search className="search-icon" size={20} />
+              <input
+                type="text"
+                placeholder="Search users..."
+                value={userSearch}
+                onChange={(e) => handleUserSearch(e.target.value)}
+                onFocus={handleUserSearchFocus}
+                onBlur={handleUserSearchBlur}
+              />
+            </div>
+            {showUserDropdown && (
+              <div className="user-dropdown">
+                {filteredUsers.length > 0 ? (
+                  filteredUsers.map((user) => (
+                    <div
+                      key={user.id}
+                      className="user-dropdown-item"
+                      onClick={() => handleUserSelect(user)}
+                    >
+                      <div className="user-info">
+                        <div className="user-name">
+                          {user.nickname || user.realname || 'No Name'}
+                        </div>
+                        {user.realname && user.nickname && (
+                          <div className="user-realname">{user.realname}</div>
+                        )}
+                        <div className="user-email">{user.email}</div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="user-dropdown-item no-users">
+                    <div className="user-info">
+                      <div className="user-name">No users found</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {selectedUser ? (
+        <div className="assign-tags-interface">
+          <div className="selected-user-info">
+            <h3>Assigning tags to: {selectedUser.nickname || selectedUser.realname || selectedUser.email}</h3>
+          </div>
+          
+          <div className="tags-container glass-container">
+            <div className="tags-header">
+              <h4>Available Tags</h4>
+              <p>Select the tags you want to assign to this user</p>
+            </div>
+            
+            {loading ? (
+              <div className="loading-spinner"></div>
+            ) : (
+              <div className="tags-list">
+                {allTags.length > 0 ? (
+                  allTags.map((tag) => (
+                    <div key={tag.id} className="tag-item">
+                      <label className="tag-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={selectedTags.includes(tag.id)}
+                          onChange={() => handleTagToggle(tag.id)}
+                        />
+                        <span className="checkbox-mark"></span>
+                        <span className="tag-name">{tag.name}</span>
+                      </label>
+                    </div>
+                  ))
+                ) : (
+                  <div className="no-data">
+                    <p>No tags available</p>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            <div className="submit-section">
+              <button 
+                className="glass-button primary"
+                onClick={saveUserTags}
+                disabled={loading}
+              >
+                <Save size={20} />
+                {loading ? 'Saving...' : 'Save Tags'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="no-user-selected">
+          <p>Search and select a user to assign tags to them</p>
+        </div>
+      )}
+    </div>
+  );
+
   if (!isAdmin) {
     return (
       <div className="admin-container">
@@ -551,6 +721,18 @@ function Admin() {
             <Database size={20} />
             Update Scripts
           </button>
+          
+          <button 
+            className={`admin-nav-button ${activePanel === 'assign-tags' ? 'active' : ''}`}
+            onClick={() => {
+              setActivePanel('assign-tags');
+              setSuccess('');
+              setError('');
+            }}
+          >
+            <Tag size={20} />
+            Assign Tags
+          </button>
         </div>
       </div>
 
@@ -570,7 +752,56 @@ function Admin() {
         {activePanel === 'picks-status' && renderPicksStatus()}
         {activePanel === 'enter-picks' && renderEnterPicks()}
         {activePanel === 'update-scripts' && renderUpdateScripts()}
+        {activePanel === 'assign-tags' && renderAssignTags()}
       </div>
+      
+      <style jsx="true">{`
+        /* Custom Radio Button Styling */
+        .custom-radio {
+          position: relative;
+          display: flex;
+          align-items: center;
+          cursor: pointer;
+        }
+
+        .custom-radio input[type="radio"] {
+          position: absolute;
+          opacity: 0;
+          cursor: pointer;
+        }
+
+        .radio-mark {
+          width: 20px;
+          height: 20px;
+          border: 2px solid rgba(255, 255, 255, 0.3);
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.05);
+          transition: all 0.3s ease;
+          position: relative;
+        }
+
+        .custom-radio input[type="radio"]:checked + .radio-mark {
+          border-color: rgba(100, 150, 255, 0.8);
+          background: rgba(100, 150, 255, 0.2);
+        }
+
+        .custom-radio input[type="radio"]:checked + .radio-mark::after {
+          content: '';
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: rgba(100, 150, 255, 1);
+        }
+        
+        /* Spacing between week title and games */
+        .games-spacing {
+          height: 2rem;
+        }
+      `}</style>
     </div>
   );
 }

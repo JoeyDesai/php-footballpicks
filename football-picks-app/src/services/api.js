@@ -88,7 +88,16 @@ export const adminAPI = {
     api.post(`/api/admin/user-picks/${userId}/${weekId}`, picks),
   
   runScript: (scriptType) => 
-    api.post('/api/admin/run-script', { scriptType })
+    api.post('/api/admin/run-script', { scriptType }),
+  
+  getAllTags: () => 
+    api.get('/api/admin/tags'),
+  
+  getUserTags: (userId) => 
+    api.get(`/api/admin/user-tags/${userId}`),
+  
+  updateUserTags: (userId, tagIds) => 
+    api.post(`/api/admin/user-tags/${userId}`, { tagIds })
 };
 
 export default api;
