@@ -3,6 +3,7 @@ import { Save, AlertCircle, CheckCircle, Clock, Zap } from 'lucide-react';
 import { gameAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import CustomDropdown from '../components/CustomDropdown';
+import { sanitizeString, sanitizeFormData, getSafeDisplayName, sanitizeInteger } from '../utils/sanitize';
 
 function MakePicks() {
   const { user } = useAuth();
@@ -181,7 +182,15 @@ function MakePicks() {
       ]);
 
       if (gamesResponse.data.success) {
-        setGames(gamesResponse.data.games);
+        // Sanitize game data
+        const sanitizedGames = gamesResponse.data.games.map(game => ({
+          ...game,
+          away_city: sanitizeString(game.away_city || ''),
+          away_name: sanitizeString(game.away_name || ''),
+          home_city: sanitizeString(game.home_city || ''),
+          home_name: sanitizeString(game.home_name || '')
+        }));
+        setGames(sanitizedGames);
         setReadOnly(gamesResponse.data.readOnly || false);
       }
 
@@ -481,13 +490,23 @@ function MakePicks() {
     setSaving(true);
 
     try {
-      const response = await gameAPI.submitPicks(selectedWeek.id, picks);
+      // Sanitize picks data before submission
+      const sanitizedPicks = {};
+      Object.keys(picks).forEach(key => {
+        if (key.startsWith('GAME')) {
+          sanitizedPicks[key] = sanitizeInteger(picks[key], 0);
+        } else if (key.startsWith('VAL')) {
+          sanitizedPicks[key] = sanitizeInteger(picks[key], 0);
+        }
+      });
+
+      const response = await gameAPI.submitPicks(selectedWeek.id, sanitizedPicks);
       if (response.data.success) {
         setSuccess('Picks saved successfully!');
         // Clear success message after animation
         setTimeout(() => setSuccess(''), 3000);
       } else {
-        setError(response.data.error || 'Failed to save picks');
+        setError(sanitizeString(response.data.error || 'Failed to save picks'));
       }
     } catch (error) {
       setError('Network error while saving picks');
@@ -1203,7 +1222,7 @@ function MakePicks() {
       <div className="picks-header glass-container">
         <div className="header-content">
           <div className="title-section">
-            <h1>Make Your Picks {user?.nickname || user?.name || ''}</h1>
+            <h1>Make Your Picks {getSafeDisplayName(user)}</h1>
           </div>
           
           <div className="controls">

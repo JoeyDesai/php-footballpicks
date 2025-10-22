@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BarChart3 } from 'lucide-react';
 import { statsAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { sanitizeString } from '../utils/sanitize';
 
 function TeamStats() {
   const { user } = useAuth();

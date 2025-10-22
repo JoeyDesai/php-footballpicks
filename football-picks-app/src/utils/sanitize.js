@@ -13,6 +13,9 @@ export const sanitizeString = (input) => {
   }
 
   return input
+    // Remove null bytes and control characters
+    .replace(/\0/g, '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
     // Remove HTML tags
     .replace(/<[^>]*>/g, '')
     // Escape HTML entities
@@ -22,11 +25,16 @@ export const sanitizeString = (input) => {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#x27;')
     .replace(/\//g, '&#x2F;')
-    // Remove potential script content
+    // Remove potential script content and event handlers
     .replace(/javascript:/gi, '')
+    .replace(/vbscript:/gi, '')
+    .replace(/data:/gi, '')
     .replace(/on\w+\s*=/gi, '')
-    // Remove null bytes
-    .replace(/\0/g, '')
+    .replace(/on\w+\s*:/gi, '')
+    // Remove SQL injection patterns
+    .replace(/('|(\\')|(;)|(\-\-)|(\/\*)|(\*\/)|(\|)|(\*)|(\%)|(\_))/gi, '')
+    // Remove potential command injection
+    .replace(/[;&|`$(){}[\]\\]/g, '')
     // Trim whitespace
     .trim();
 };
@@ -165,4 +173,189 @@ export const getSafeDisplayName = (user) => {
   const name = user.name ? sanitizeString(user.name) : '';
   
   return nickname || realName || name || 'Unknown User';
+};
+
+/**
+ * Sanitizes input for safe HTML attribute values
+ * @param {string} input - Input to sanitize
+ * @returns {string} - Sanitized attribute value
+ */
+export const sanitizeAttribute = (input) => {
+  if (typeof input !== 'string') {
+    return String(input || '');
+  }
+
+  return input
+    // Remove null bytes and control characters
+    .replace(/\0/g, '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Remove quotes and dangerous characters
+    .replace(/["'`]/g, '')
+    .replace(/[<>]/g, '')
+    // Remove potential script content
+    .replace(/javascript:/gi, '')
+    .replace(/vbscript:/gi, '')
+    .replace(/data:/gi, '')
+    .replace(/on\w+\s*=/gi, '')
+    // Trim whitespace
+    .trim();
+};
+
+/**
+ * Sanitizes input for safe URL usage
+ * @param {string} input - Input to sanitize
+ * @returns {string} - Sanitized URL
+ */
+export const sanitizeUrl = (input) => {
+  if (typeof input !== 'string') {
+    return '';
+  }
+
+  return input
+    // Remove null bytes and control characters
+    .replace(/\0/g, '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Remove dangerous protocols
+    .replace(/javascript:/gi, '')
+    .replace(/vbscript:/gi, '')
+    .replace(/data:/gi, '')
+    .replace(/file:/gi, '')
+    // Remove potential script content
+    .replace(/on\w+\s*=/gi, '')
+    // Trim whitespace
+    .trim();
+};
+
+/**
+ * Sanitizes input for safe CSS usage
+ * @param {string} input - Input to sanitize
+ * @returns {string} - Sanitized CSS
+ */
+export const sanitizeCss = (input) => {
+  if (typeof input !== 'string') {
+    return '';
+  }
+
+  return input
+    // Remove null bytes and control characters
+    .replace(/\0/g, '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Remove dangerous CSS patterns
+    .replace(/expression\s*\(/gi, '')
+    .replace(/javascript:/gi, '')
+    .replace(/vbscript:/gi, '')
+    .replace(/data:/gi, '')
+    .replace(/url\s*\(/gi, '')
+    .replace(/@import/gi, '')
+    // Remove potential script content
+    .replace(/on\w+\s*=/gi, '')
+    // Trim whitespace
+    .trim();
+};
+
+/**
+ * Sanitizes input for safe JSON usage
+ * @param {string} input - Input to sanitize
+ * @returns {string} - Sanitized JSON string
+ */
+export const sanitizeJson = (input) => {
+  if (typeof input !== 'string') {
+    return '';
+  }
+
+  return input
+    // Remove null bytes and control characters
+    .replace(/\0/g, '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Escape JSON special characters
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r')
+    .replace(/\t/g, '\\t')
+    // Trim whitespace
+    .trim();
+};
+
+/**
+ * Sanitizes input for safe SQL usage (parameterized queries only)
+ * @param {string} input - Input to sanitize
+ * @returns {string} - Sanitized SQL string
+ */
+export const sanitizeSql = (input) => {
+  if (typeof input !== 'string') {
+    return '';
+  }
+
+  return input
+    // Remove null bytes and control characters
+    .replace(/\0/g, '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Remove SQL injection patterns
+    .replace(/('|(\\')|(;)|(\-\-)|(\/\*)|(\*\/)|(\|)|(\*)|(\%)|(\_))/gi, '')
+    .replace(/[;&|`$(){}[\]\\]/g, '')
+    // Remove potential command injection
+    .replace(/[<>]/g, '')
+    // Trim whitespace
+    .trim();
+};
+
+/**
+ * Sanitizes input for safe file system usage
+ * @param {string} input - Input to sanitize
+ * @returns {string} - Sanitized filename
+ */
+export const sanitizeFilename = (input) => {
+  if (typeof input !== 'string') {
+    return '';
+  }
+
+  return input
+    // Remove null bytes and control characters
+    .replace(/\0/g, '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Remove dangerous file system characters
+    .replace(/[<>:"/\\|?*]/g, '')
+    .replace(/\.\./g, '')
+    .replace(/^\./g, '')
+    // Remove potential script content
+    .replace(/javascript:/gi, '')
+    .replace(/vbscript:/gi, '')
+    .replace(/data:/gi, '')
+    // Trim whitespace
+    .trim();
+};
+
+/**
+ * Sanitizes input for safe HTML content (allows some HTML but removes dangerous elements)
+ * @param {string} input - Input to sanitize
+ * @returns {string} - Sanitized HTML
+ */
+export const sanitizeHtml = (input) => {
+  if (typeof input !== 'string') {
+    return '';
+  }
+
+  return input
+    // Remove null bytes and control characters
+    .replace(/\0/g, '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Remove dangerous HTML elements and attributes
+    .replace(/<script[^>]*>.*?<\/script>/gi, '')
+    .replace(/<iframe[^>]*>.*?<\/iframe>/gi, '')
+    .replace(/<object[^>]*>.*?<\/object>/gi, '')
+    .replace(/<embed[^>]*>.*?<\/embed>/gi, '')
+    .replace(/<applet[^>]*>.*?<\/applet>/gi, '')
+    .replace(/<form[^>]*>.*?<\/form>/gi, '')
+    .replace(/<input[^>]*>/gi, '')
+    .replace(/<textarea[^>]*>.*?<\/textarea>/gi, '')
+    .replace(/<select[^>]*>.*?<\/select>/gi, '')
+    .replace(/<button[^>]*>.*?<\/button>/gi, '')
+    // Remove dangerous attributes
+    .replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '')
+    .replace(/\s*javascript\s*:/gi, '')
+    .replace(/\s*vbscript\s*:/gi, '')
+    .replace(/\s*data\s*:/gi, '')
+    // Trim whitespace
+    .trim();
 };

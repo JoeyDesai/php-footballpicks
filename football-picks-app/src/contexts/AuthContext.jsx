@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI } from '../services/api';
+import { sanitizeUserData } from '../utils/sanitize';
 
 // Create the authentication context for managing user state across the application
 const AuthContext = createContext();
@@ -42,7 +43,7 @@ export function AuthProvider({ children }) {
     try {
       const response = await authAPI.checkSession();
       if (response.data && response.data.authenticated) {
-        setUser(response.data.user);
+        setUser(sanitizeUserData(response.data.user));
       }
     } catch (error) {
       console.log('No active session:', error.message);
@@ -62,7 +63,7 @@ export function AuthProvider({ children }) {
       const response = await authAPI.login(email, password);
       
       if (response.data && response.data.success) {
-        setUser(response.data.user);
+        setUser(sanitizeUserData(response.data.user));
         return { success: true };
       } else {
         return { success: false, error: response.data?.error || 'Invalid email or password' };

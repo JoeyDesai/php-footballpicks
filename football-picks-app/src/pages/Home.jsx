@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Trophy, Calendar, TrendingUp, BarChart3, HelpCircle, QrCode, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { statsAPI, gameAPI } from '../services/api';
+import { sanitizeString, sanitizeUserData, getSafeDisplayName } from '../utils/sanitize';
 
 function Home() {
   const { user } = useAuth();
@@ -103,12 +104,26 @@ function Home() {
       ]);
 
       if (weeklyResponse.data.success) {
-        setWeeklyStandings(weeklyResponse.data.weeklyStandings.slice(0, 5)); // Top 5
+        // Sanitize weekly standings data
+        const sanitizedWeekly = weeklyResponse.data.weeklyStandings.slice(0, 5).map(player => ({
+          ...player,
+          nickname: sanitizeString(player.nickname || ''),
+          realName: sanitizeString(player.realName || ''),
+          name: sanitizeString(player.name || '')
+        }));
+        setWeeklyStandings(sanitizedWeekly);
         setCurrentWeek(weeklyResponse.data.currentWeek);
       }
 
       if (overallResponse.data.success) {
-        setOverallStandings(overallResponse.data.standings.slice(0, 5)); // Top 5
+        // Sanitize overall standings data
+        const sanitizedOverall = overallResponse.data.standings.slice(0, 5).map(player => ({
+          ...player,
+          nickname: sanitizeString(player.nickname || ''),
+          realName: sanitizeString(player.realName || ''),
+          name: sanitizeString(player.name || '')
+        }));
+        setOverallStandings(sanitizedOverall);
       }
 
       if (weeksResponse.data.success) {
@@ -141,7 +156,7 @@ function Home() {
   return (
     <div className="home-container">
       <div className="welcome-section glass-container">
-        <h1>Welcome back, {user?.nickname || user?.realName}!</h1>
+        <h1>Welcome back, {getSafeDisplayName(user)}!</h1>
         <p>
           You have <strong>{countdown.days}</strong> <strong>{countdown.days === 1 ? 'day' : 'days'}</strong><strong>,</strong> <strong>{countdown.hours}</strong> <strong>{countdown.hours === 1 ? 'hour' : 'hours'}</strong><strong>,</strong> and{' '}
           <strong>{countdown.minutes}</strong> <strong>{countdown.minutes === 1 ? 'minute' : 'minutes'}</strong> to do your picks.
@@ -180,7 +195,7 @@ function Home() {
                       className={player.id === user?.id ? 'current-user' : ''}
                     >
                       <td>{index + 1}</td>
-                      <td>{player.nickname}</td>
+                      <td>{sanitizeString(player.nickname)}</td>
                       <td>{formatNumber(player.score)} ({formatNumber(player.numright)})</td>
                     </tr>
                   ))}
@@ -188,7 +203,7 @@ function Home() {
               </table>
               <div className="view-all-link">
                 <Link to="/weekly-standings" className="glass-button secondary">
-                  View Full Standings
+                  View Weekly Standings
                 </Link>
               </div>
             </div>
@@ -225,7 +240,7 @@ function Home() {
                       className={player.id === user?.id ? 'current-user' : ''}
                     >
                       <td>{index + 1}</td>
-                      <td>{player.nickname}</td>
+                      <td>{sanitizeString(player.nickname)}</td>
                       <td>{formatNumber(player.score)} ({formatNumber(player.numright)})</td>
                     </tr>
                   ))}
@@ -233,7 +248,7 @@ function Home() {
               </table>
               <div className="view-all-link">
                 <Link to="/overall-standings" className="glass-button secondary">
-                  View Full Standings
+                  View Overall Standings
                 </Link>
               </div>
             </div>

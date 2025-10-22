@@ -13,10 +13,28 @@ const sanitizeString = (input) => {
   }
 
   return input
-    // Remove null bytes
+    // Remove null bytes and control characters
     .replace(/\0/g, '')
-    // Remove control characters except newlines and tabs
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Remove HTML tags
+    .replace(/<[^>]*>/g, '')
+    // Escape HTML entities
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;')
+    // Remove potential script content and event handlers
+    .replace(/javascript:/gi, '')
+    .replace(/vbscript:/gi, '')
+    .replace(/data:/gi, '')
+    .replace(/on\w+\s*=/gi, '')
+    .replace(/on\w+\s*:/gi, '')
+    // Remove SQL injection patterns
+    .replace(/('|(\\')|(;)|(\-\-)|(\/\*)|(\*\/)|(\|)|(\*)|(\%)|(\_))/gi, '')
+    // Remove potential command injection
+    .replace(/[;&|`$(){}[\]\\]/g, '')
     // Trim whitespace
     .trim();
 };
@@ -221,6 +239,108 @@ const validatePicksData = (picks, gameIds) => {
 };
 
 /**
+ * Sanitizes input for safe HTML attribute values
+ * @param {string} input - Input to sanitize
+ * @returns {string} - Sanitized attribute value
+ */
+const sanitizeAttribute = (input) => {
+  if (typeof input !== 'string') {
+    return String(input || '');
+  }
+
+  return input
+    // Remove null bytes and control characters
+    .replace(/\0/g, '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Remove quotes and dangerous characters
+    .replace(/["'`]/g, '')
+    .replace(/[<>]/g, '')
+    // Remove potential script content
+    .replace(/javascript:/gi, '')
+    .replace(/vbscript:/gi, '')
+    .replace(/data:/gi, '')
+    .replace(/on\w+\s*=/gi, '')
+    // Trim whitespace
+    .trim();
+};
+
+/**
+ * Sanitizes input for safe URL usage
+ * @param {string} input - Input to sanitize
+ * @returns {string} - Sanitized URL
+ */
+const sanitizeUrl = (input) => {
+  if (typeof input !== 'string') {
+    return '';
+  }
+
+  return input
+    // Remove null bytes and control characters
+    .replace(/\0/g, '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Remove dangerous protocols
+    .replace(/javascript:/gi, '')
+    .replace(/vbscript:/gi, '')
+    .replace(/data:/gi, '')
+    .replace(/file:/gi, '')
+    // Remove potential script content
+    .replace(/on\w+\s*=/gi, '')
+    // Trim whitespace
+    .trim();
+};
+
+/**
+ * Sanitizes input for safe SQL usage (parameterized queries only)
+ * @param {string} input - Input to sanitize
+ * @returns {string} - Sanitized SQL string
+ */
+const sanitizeSql = (input) => {
+  if (typeof input !== 'string') {
+    return '';
+  }
+
+  return input
+    // Remove null bytes and control characters
+    .replace(/\0/g, '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Remove SQL injection patterns
+    .replace(/('|(\\')|(;)|(\-\-)|(\/\*)|(\*\/)|(\|)|(\*)|(\%)|(\_))/gi, '')
+    .replace(/[;&|`$(){}[\]\\]/g, '')
+    // Remove potential command injection
+    .replace(/[<>]/g, '')
+    // Trim whitespace
+    .trim();
+};
+
+/**
+ * Sanitizes user data specifically for display
+ * @param {Object} userData - User data to sanitize
+ * @returns {Object} - Sanitized user data
+ */
+const sanitizeUserData = (userData) => {
+  if (!userData || typeof userData !== 'object') {
+    return userData;
+  }
+
+  const sanitized = { ...userData };
+  
+  if (sanitized.nickname) {
+    sanitized.nickname = sanitizeString(sanitized.nickname);
+  }
+  if (sanitized.realName) {
+    sanitized.realName = sanitizeString(sanitized.realName);
+  }
+  if (sanitized.email) {
+    sanitized.email = sanitizeString(sanitized.email);
+  }
+  if (sanitized.name) {
+    sanitized.name = sanitizeString(sanitized.name);
+  }
+  
+  return sanitized;
+};
+
+/**
  * Rate limiting helper
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -273,5 +393,9 @@ module.exports = {
   validateLoginCredentials,
   validateUserRegistration,
   validatePicksData,
+  sanitizeAttribute,
+  sanitizeUrl,
+  sanitizeSql,
+  sanitizeUserData,
   rateLimit
 };

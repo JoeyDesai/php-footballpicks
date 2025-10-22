@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { statsAPI, gameAPI, authAPI } from '../services/api';
 import CustomDropdown from '../components/CustomDropdown';
+import { sanitizeString, sanitizeUserData } from '../utils/sanitize';
 
 // Utility function to format numbers - remove .0 but keep other decimals
 const formatNumber = (num) => {

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Target, Mail, Lock, User, Key, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { sanitizeString, sanitizeFormData } from '../utils/sanitize';
 
 function CreateAccount() {
   const [formData, setFormData] = useState({
@@ -19,9 +20,10 @@ function CreateAccount() {
   const navigate = useNavigate();
 
   const handleChange = (e) => {
+    const sanitizedValue = sanitizeString(e.target.value);
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: sanitizedValue
     });
     setError('');
     setSuccess('');
@@ -33,20 +35,23 @@ function CreateAccount() {
     setError('');
     setSuccess('');
 
+    // Sanitize form data before validation
+    const sanitizedFormData = sanitizeFormData(formData);
+
     // Client-side validation
-    if (formData.password !== formData.confirmPassword) {
+    if (sanitizedFormData.password !== sanitizedFormData.confirmPassword) {
       setError('Passwords do not match');
       setLoading(false);
       return;
     }
 
-    if (formData.password.length < 6) {
+    if (sanitizedFormData.password.length < 6) {
       setError('Password must be at least 6 characters long');
       setLoading(false);
       return;
     }
 
-    const result = await createAccount(formData);
+    const result = await createAccount(sanitizedFormData);
     
     if (result.success) {
       setSuccess('Account created successfully! Please log in.');
@@ -54,7 +59,7 @@ function CreateAccount() {
         navigate('/login');
       }, 2000);
     } else {
-      setError(result.error);
+      setError(sanitizeString(result.error || 'Account creation failed'));
     }
     
     setLoading(false);
@@ -72,14 +77,14 @@ function CreateAccount() {
         {error && (
           <div className="error-message">
             <AlertCircle size={20} />
-            <span>{error}</span>
+            <span>{sanitizeString(error)}</span>
           </div>
         )}
 
         {success && (
           <div className="success-message">
             <CheckCircle size={20} />
-            <span>{success}</span>
+            <span>{sanitizeString(success)}</span>
           </div>
         )}
 

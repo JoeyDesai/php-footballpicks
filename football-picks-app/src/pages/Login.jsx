@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Lock, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { sanitizeString, sanitizeFormData } from '../utils/sanitize';
 
 function Login() {
   const [formData, setFormData] = useState({
@@ -42,9 +43,10 @@ function Login() {
   }, []);
 
   const handleChange = (e) => {
+    const sanitizedValue = sanitizeString(e.target.value);
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: sanitizedValue
     });
     setError('');
   };
@@ -54,10 +56,12 @@ function Login() {
     setLoading(true);
     setError('');
 
-    const result = await login(formData.email, formData.password);
+    // Sanitize form data before submission
+    const sanitizedFormData = sanitizeFormData(formData);
+    const result = await login(sanitizedFormData.email, sanitizedFormData.password);
     
     if (!result.success) {
-      setError(result.error);
+      setError(sanitizeString(result.error || 'Login failed'));
     }
     
     setLoading(false);
@@ -74,7 +78,7 @@ function Login() {
         {error && (
           <div className="error-message">
             <AlertCircle size={20} />
-            <span>{error}</span>
+            <span>{sanitizeString(error)}</span>
           </div>
         )}
 

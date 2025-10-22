@@ -10,6 +10,7 @@ const {
   validateLoginCredentials, 
   validateUserRegistration, 
   validatePicksData,
+  sanitizeUserData,
   rateLimit 
 } = require('./utils/security');
 
@@ -91,12 +92,12 @@ app.get('/api/check-session', async (req, res) => {
       const user = result.rows[0];
       res.json({
         authenticated: true,
-        user: {
+        user: sanitizeUserData({
           id: user.id,
           email: user.email,
           nickname: user.nickname,
           realName: user.realname
-        }
+        })
       });
     } else {
       res.json({ authenticated: false });
@@ -121,7 +122,7 @@ app.get('/api/user-tags', requireAuth, async (req, res) => {
     
     const tags = result.rows.map(tag => ({
       id: tag.id,
-      name: tag.name
+      name: sanitizeString(tag.name)
     }));
     
     // Always include "All" option
@@ -168,12 +169,12 @@ app.post('/api/login', async (req, res) => {
     req.session.userId = user.id;
     res.json({
       success: true,
-      user: {
+      user: sanitizeUserData({
         id: user.id,
         email: user.email,
         nickname: user.nickname,
         realName: user.realname
-      }
+      })
     });
   } catch (error) {
     console.error('Login error:', error);
