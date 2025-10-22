@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Users, Database, CheckCircle, XCircle, Search, Play, Save, Tag } from 'lucide-react';
+import { Settings, Users, Database, CheckCircle, XCircle, Search, Play, Save, Tag, Zap } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { gameAPI, statsAPI, adminAPI } from '../services/api';
 import CustomDropdown from '../components/CustomDropdown';
@@ -20,6 +20,7 @@ function Admin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [autoPickHighest, setAutoPickHighest] = useState(true);
   
   // Assign Tags state
   const [allTags, setAllTags] = useState([]);
@@ -198,10 +199,36 @@ function Admin() {
   };
 
   const handlePickChange = (gameId, team) => {
-    setUserPicks(prev => ({
-      ...prev,
+    const newPicks = {
+      ...userPicks,
       [`GAME${gameId}`]: team
-    }));
+    };
+
+    // Auto-assign highest available point value if auto-pick is enabled
+    if (autoPickHighest) {
+      const usedValues = new Set();
+      games.forEach(game => {
+        const value = newPicks[`VAL${game.id}`];
+        if (value && value !== 0) {
+          usedValues.add(value);
+        }
+      });
+
+      // Find the highest unused value
+      let highestUnused = 0;
+      for (let i = games.length; i >= 1; i--) {
+        if (!usedValues.has(i)) {
+          highestUnused = i;
+          break;
+        }
+      }
+
+      if (highestUnused > 0) {
+        newPicks[`VAL${gameId}`] = highestUnused;
+      }
+    }
+
+    setUserPicks(newPicks);
   };
 
   const handleValueChange = (gameId, value) => {
@@ -209,6 +236,10 @@ function Admin() {
       ...prev,
       [`VAL${gameId}`]: parseInt(value)
     }));
+  };
+
+  const handleAutoPickToggle = () => {
+    setAutoPickHighest(!autoPickHighest);
   };
 
   const saveUserPicks = async () => {
@@ -234,6 +265,37 @@ function Admin() {
     } catch (error) {
       console.error(`Error running ${scriptType} script:`, error);
       setError(`Failed to run ${scriptType} script`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const runAllUpdateScripts = async () => {
+    setLoading(true);
+    try {
+      const scripts = ['individualRecords', 'losers', 'teamRecords'];
+      let allSuccess = true;
+      let errorMessage = '';
+
+      for (const script of scripts) {
+        try {
+          const response = await adminAPI.runScript(script);
+          console.log(`${script} script completed:`, response.data.message);
+        } catch (error) {
+          console.error(`Error running ${script} script:`, error);
+          allSuccess = false;
+          errorMessage += `${script} failed; `;
+        }
+      }
+
+      if (allSuccess) {
+        setSuccess('All update scripts executed successfully');
+      } else {
+        setError(`Some scripts failed: ${errorMessage}`);
+      }
+    } catch (error) {
+      console.error('Error running update scripts:', error);
+      setError('Failed to run update scripts');
     } finally {
       setLoading(false);
     }
@@ -376,6 +438,14 @@ function Admin() {
             <div className="main-panel-header">
               <div className="header-row">
                 <h2>Week {selectedWeek ? weeks.find(w => w.id === selectedWeek)?.number : ''}</h2>
+                <button
+                  type="button"
+                  className={`auto-pick-button ${autoPickHighest ? 'active' : ''}`}
+                  onClick={handleAutoPickToggle}
+                >
+                  <Zap size={16} />
+                  Auto Pick Highest Points
+                </button>
               </div>
             </div>
             
@@ -529,29 +599,20 @@ function Admin() {
         <div className="script-buttons">
           <button 
             className="script-button"
-            onClick={() => runUpdateScript('individualRecords')}
+            onClick={() => runUpdateScript('nflScores')}
             disabled={loading}
           >
             <Database className="script-icon" size={20} />
-            Update Individual Records
+            Update NFL Scores
           </button>
           
           <button 
             className="script-button"
-            onClick={() => runUpdateScript('losers')}
+            onClick={runAllUpdateScripts}
             disabled={loading}
           >
             <Database className="script-icon" size={20} />
-            Update Losers
-          </button>
-          
-          <button 
-            className="script-button"
-            onClick={() => runUpdateScript('teamRecords')}
-            disabled={loading}
-          >
-            <Database className="script-icon" size={20} />
-            Update Team Records
+            Run All Update Scripts
           </button>
         </div>
       </div>
@@ -800,6 +861,60 @@ function Admin() {
         /* Spacing between week title and games */
         .games-spacing {
           height: 2rem;
+        }
+
+        /* Header Row Layout */
+        .header-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 1rem;
+        }
+
+        .main-panel-header h2 {
+          color: white;
+          font-size: 1.5rem;
+          font-weight: 600;
+          margin: 0;
+        }
+
+        /* Auto Pick Button */
+        .auto-pick-button {
+          background: rgba(255, 255, 255, 0.08);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          color: rgba(255, 255, 255, 0.7);
+          padding: 0.6rem 1rem;
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          font-size: 0.9rem;
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          box-shadow: 
+            0 4px 16px rgba(0, 0, 0, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .auto-pick-button:hover {
+          background: rgba(255, 255, 255, 0.12);
+          border-color: rgba(255, 255, 255, 0.25);
+          color: white;
+          box-shadow: 
+            0 6px 20px rgba(0, 0, 0, 0.15),
+            inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+
+        .auto-pick-button.active {
+          background: rgba(100, 150, 255, 0.15);
+          border-color: rgba(100, 150, 255, 0.4);
+          color: rgba(150, 200, 255, 1);
+          box-shadow: 
+            0 0 0 3px rgba(100, 150, 255, 0.1),
+            0 6px 20px rgba(0, 0, 0, 0.15),
+            inset 0 1px 0 rgba(255, 255, 255, 0.15);
         }
       `}</style>
     </div>

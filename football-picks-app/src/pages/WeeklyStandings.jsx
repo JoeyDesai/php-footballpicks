@@ -751,10 +751,19 @@ function WeeklyStandings() {
             <div className="week-selector">
               <label htmlFor="week-select">Week</label>
               <CustomDropdown
-                options={weeks.map(week => ({
-                  value: week.id,
-                  label: `Week ${week.number}`
-                }))}
+                options={(() => {
+                  // Calculate auto-selected week once outside the map
+                  const completedWeeks = weeks.filter(w => w.completed);
+                  const autoSelectedWeek = completedWeeks[completedWeeks.length - 1] || weeks[0];
+                  
+                  return weeks.map(week => {
+                    const isAutoSelected = week.id === autoSelectedWeek?.id;
+                    return {
+                      value: week.id,
+                      label: isAutoSelected ? `Week ${week.number} (Current)` : `Week ${week.number}`
+                    };
+                  });
+                })()}
                 value={selectedWeek?.id || ''}
                 onChange={(value) => {
                   const week = weeks.find(w => w.id === parseInt(value));

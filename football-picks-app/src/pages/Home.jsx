@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Trophy, Calendar, TrendingUp, BarChart3, HelpCircle, QrCode, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { statsAPI } from '../services/api';
+import { statsAPI, gameAPI } from '../services/api';
 
 function Home() {
   const { user } = useAuth();
@@ -10,11 +10,49 @@ function Home() {
   const [overallStandings, setOverallStandings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentWeek, setCurrentWeek] = useState(null);
+  const [nextWeek, setNextWeek] = useState(null);
+  const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0 });
   const [showHowToPlay, setShowHowToPlay] = useState(false);
   const [showInstallApp, setShowInstallApp] = useState(false);
 
   useEffect(() => {
     loadHomeData();
+  }, []);
+
+  // Simple countdown to next Thursday (typical NFL game day)
+  useEffect(() => {
+    const updateCountdown = () => {
+      const now = new Date();
+      const nextThursday = new Date();
+      
+      // Find next Thursday
+      const daysUntilThursday = (4 - now.getDay() + 7) % 7; // Thursday is day 4
+      nextThursday.setDate(now.getDate() + (daysUntilThursday === 0 ? 7 : daysUntilThursday));
+      nextThursday.setHours(20, 0, 0, 0); // 8 PM Eastern (typical game time)
+      
+      const timeDiff = nextThursday.getTime() - now.getTime();
+      
+      console.log('Countdown update:', { now, nextThursday, timeDiff });
+      
+      if (timeDiff > 0) {
+        const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+        
+        console.log('Setting countdown:', { days, hours, minutes });
+        setCountdown({ days, hours, minutes });
+      } else {
+        setCountdown({ days: 0, hours: 0, minutes: 0 });
+      }
+    };
+
+    // Update immediately
+    updateCountdown();
+    
+    // Update every minute
+    const interval = setInterval(updateCountdown, 60000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   // Fix mobile scroll position on mount
@@ -57,10 +95,11 @@ function Home() {
     try {
       setLoading(true);
       
-      // Load both weekly and overall standings for home page preview
-      const [weeklyResponse, overallResponse] = await Promise.all([
+      // Load weekly standings, overall standings, and weeks data
+      const [weeklyResponse, overallResponse, weeksResponse] = await Promise.all([
         statsAPI.getHomeStats(), // This will get current week standings
-        statsAPI.getOverallStandings()
+        statsAPI.getOverallStandings(),
+        statsAPI.getWeeks()
       ]);
 
       if (weeklyResponse.data.success) {
@@ -70,6 +109,19 @@ function Home() {
 
       if (overallResponse.data.success) {
         setOverallStandings(overallResponse.data.standings.slice(0, 5)); // Top 5
+      }
+
+      if (weeksResponse.data.success) {
+        // Find the next week for making picks
+        const weeks = weeksResponse.data.weeks;
+        const completedWeeks = weeks.filter(w => w.completed);
+        const currentWeek = completedWeeks[completedWeeks.length - 1] || weeks[0];
+        
+        // Find the next week after the current week
+        const currentIndex = weeks.findIndex(w => w.id === currentWeek.id);
+        const nextWeek = weeks[currentIndex + 1];
+        
+        setNextWeek(nextWeek || currentWeek);
       }
     } catch (error) {
       console.error('Error loading home data:', error);
@@ -90,9 +142,12 @@ function Home() {
     <div className="home-container">
       <div className="welcome-section glass-container">
         <h1>Welcome back, {user?.nickname || user?.realName}!</h1>
-        <p>Ready to make your picks for this week?</p>
+        <p>
+          You have <strong>{countdown.days}</strong> <strong>{countdown.days === 1 ? 'day' : 'days'}</strong><strong>,</strong> <strong>{countdown.hours}</strong> <strong>{countdown.hours === 1 ? 'hour' : 'hours'}</strong><strong>,</strong> and{' '}
+          <strong>{countdown.minutes}</strong> <strong>{countdown.minutes === 1 ? 'minute' : 'minutes'}</strong> to do your picks.
+        </p>
         <Link to="/make-picks" className="auto-pick-button">
-          Enter Your Picks
+          Enter Week {nextWeek?.number || 'X'} Picks
         </Link>
       </div>
 
@@ -351,6 +406,12 @@ function Home() {
           font-size: 1.2rem;
           color: rgba(255, 255, 255, 0.8);
           margin-bottom: 2rem;
+        }
+
+        .welcome-section p strong {
+          color: rgba(150, 200, 255, 1);
+          font-weight: 700;
+          font-size: 1.3rem;
         }
 
         .stats-grid {

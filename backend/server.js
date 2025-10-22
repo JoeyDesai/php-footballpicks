@@ -26,7 +26,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Rate limiting
-app.use(rateLimit(100, 15 * 60 * 1000)); // 100 requests per 15 minutes
+app.use(rateLimit(1500, 15 * 60 * 1000)); // 1500 requests per 15 minutes
 
 // Security headers
 app.use((req, res, next) => {
