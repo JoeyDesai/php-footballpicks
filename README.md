@@ -1,164 +1,393 @@
-# Football Picks App
+# Football Picks Application
 
-A complete football picks application with React frontend and Node.js backend.
+A modern web application for NFL football picks competition built with React and Node.js. Users can make weekly picks, view standings, and compete with friends in a beautiful, responsive interface.
 
 ## Features
 
-- User authentication (login/register)
-- Make picks for NFL games
-- View weekly and overall standings
-- Team statistics
-- Responsive design with glass morphism UI
+- **User Authentication**: Secure login and account creation
+- **Weekly Picks**: Make picks for NFL games with confidence values
+- **Standings**: View weekly and overall standings with detailed statistics
+- **Team Statistics**: Track team performance and pick accuracy
+- **Admin Panel**: Manage users, run update scripts, and assign tags
+- **Progressive Web App**: Installable on mobile devices
+- **Responsive Design**: Works seamlessly on desktop and mobile
+- **Real-time Updates**: Live score updates and standings
+
+## Technology Stack
+
+### Frontend
+- **React 19** - Modern UI framework
+- **Vite** - Fast build tool and dev server
+- **React Router** - Client-side routing
+- **Axios** - HTTP client for API calls
+- **Lucide React** - Beautiful icons
+- **CSS3** - Custom glass-morphism design
+
+### Backend
+- **Node.js** - JavaScript runtime
+- **Express.js** - Web framework
+- **PostgreSQL** - Database
+- **Express Session** - Session management
+- **CORS** - Cross-origin resource sharing
+- **PHP** - Legacy update scripts
+
+## Author
+
+**Joe M.** - Full Stack Developer
+- Created the modern React frontend
+- Developed the Node.js backend API
+- Implemented responsive design and PWA features
+- Built the admin panel and user management system
 
 ## Prerequisites
 
-- Node.js (version 14 or higher)
-- npm (comes with Node.js)
+- **Node.js** (v18 or higher)
+- **npm** or **yarn**
+- **PostgreSQL** (v12 or higher)
+- **PHP** (for update scripts)
+- **Git**
 
-## Setup Instructions for Windows
+## Local Development Setup
 
-### 1. Install Node.js
+### 1. Clone the Repository
 
-1. Go to [nodejs.org](https://nodejs.org/)
-2. Download the LTS version for Windows
-3. Run the installer and follow the setup wizard
-4. Open Command Prompt or PowerShell and verify installation:
-   ```
-   node --version
-   npm --version
-   ```
+```bash
+git clone <repository-url>
+cd React\ Football\ Picks
+```
 
-### 2. Download and Setup the Project
+### 2. Database Setup
 
-1. Download/clone this project to your computer
-2. Open Command Prompt or PowerShell
-3. Navigate to the project folder:
-   ```
-   cd path\to\football-picks-app
-   ```
-
-### 3. Setup the Backend
-
-1. Navigate to the backend folder:
-   ```
-   cd backend
+1. **Install PostgreSQL** on your system
+2. **Create a database**:
+   ```sql
+   CREATE DATABASE football;
+   CREATE USER footballusr WITH PASSWORD 'password';
+   GRANT ALL PRIVILEGES ON DATABASE football TO footballusr;
    ```
 
-2. Install backend dependencies:
-   ```
-   npm install
-   ```
-
-3. Initialize the database:
-   ```
-   npm run init-db
+3. **Import the database schema** (if you have a SQL dump file):
+   ```bash
+   psql -U footballusr -d football -f database_schema.sql
    ```
 
-4. Seed the database with sample data:
-   ```
-   npm run seed-db
-   ```
+### 3. Backend Setup
 
-5. Start the backend server:
-   ```
-   npm run dev
-   ```
+```bash
+cd backend
+npm install
+```
 
-   You should see: "Server running on port 3001"
+**Configure the database connection** in `backend/config/app.js`:
+```javascript
+database: {
+  user: 'footballusr',
+  host: 'localhost',
+  database: 'football',
+  password: 'password',
+  port: 5432
+}
+```
 
-### 4. Setup the Frontend (New Command Prompt/PowerShell Window)
+**Start the backend server**:
+```bash
+npm start
+# or for development
+npm run dev
+```
 
-1. Open a NEW Command Prompt or PowerShell window
-2. Navigate to the frontend folder:
-   ```
-   cd path\to\football-picks-app\football-picks-app
-   ```
+The backend will run on `http://localhost:3001`
 
-3. Install frontend dependencies:
-   ```
-   npm install
-   ```
+### 4. Frontend Setup
 
-4. Start the frontend development server:
-   ```
-   npm run dev
-   ```
+```bash
+cd football-picks-app
+npm install
+```
 
-   You should see: "Local: http://localhost:5173"
+**Start the development server**:
+```bash
+npm run dev
+```
+
+The frontend will run on `http://localhost:5173`
 
 ### 5. Access the Application
 
-1. Open your web browser
-2. Go to: `http://localhost:5173`
-3. You can now use the application!
+- Open your browser and navigate to `http://localhost:5173`
+- The frontend will automatically connect to the backend API
+- Create an account or login to start using the application
 
-## Test Accounts
+## Linux Server Deployment
 
-The database comes with these test accounts:
+### 1. Server Requirements
 
-- **Email:** `test@test.com` **Password:** `password`
-- **Email:** `joe` **Password:** `password`
+- **Ubuntu 20.04+** or **CentOS 7+**
+- **Node.js 18+**
+- **PostgreSQL 12+**
+- **Nginx** (for reverse proxy)
+- **PM2** (for process management)
+- **PHP 7.4+** (for update scripts)
 
-Or create a new account using site password: `cowboys`
+### 2. Install Dependencies
 
-## How to Use
+#### Ubuntu/Debian:
+```bash
+# Update system
+sudo apt update && sudo apt upgrade -y
 
-1. **Login** with one of the test accounts or create a new one
-2. **Make Picks** - Select winners and assign point values (1-16 for each game)
-3. **View Standings** - See weekly and overall rankings
-4. **Team Stats** - View statistics about team performance
+# Install Node.js
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs
 
-## Project Structure
+# Install PostgreSQL
+sudo apt install postgresql postgresql-contrib
 
+# Install PHP
+sudo apt install php php-cli php-fpm php-pgsql
+
+# Install Nginx
+sudo apt install nginx
+
+# Install PM2 globally
+sudo npm install -g pm2
 ```
-football-picks-app/
-├── backend/                 # Node.js/Express backend
-│   ├── server.js           # Main server file
-│   ├── scripts/            # Database setup scripts
-│   └── package.json        # Backend dependencies
-├── football-picks-app/     # React frontend
-│   ├── src/                # React source code
-│   ├── public/             # Static files
-│   └── package.json        # Frontend dependencies
-├── images/                 # Team logos
-└── README.md              # This file
+
+#### CentOS/RHEL:
+```bash
+# Install Node.js
+curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+sudo yum install -y nodejs
+
+# Install PostgreSQL
+sudo yum install postgresql-server postgresql-contrib
+sudo postgresql-setup initdb
+sudo systemctl enable postgresql
+sudo systemctl start postgresql
+
+# Install PHP
+sudo yum install php php-cli php-fpm php-pgsql
+
+# Install Nginx
+sudo yum install nginx
+
+# Install PM2 globally
+sudo npm install -g pm2
 ```
 
-## Database
+### 3. Database Setup
 
-- Uses SQLite database (`database.sqlite`)
-- Automatically created when you run `npm run init-db`
-- Contains tables for users, teams, games, picks, etc.
+```bash
+# Switch to postgres user
+sudo -u postgres psql
 
-## Stopping the Application
+# Create database and user
+CREATE DATABASE football;
+CREATE USER footballusr WITH PASSWORD 'your_secure_password';
+GRANT ALL PRIVILEGES ON DATABASE football TO footballusr;
+\q
+```
 
-- Press `Ctrl+C` in both Command Prompt windows to stop the servers
-- The database file will persist, so your data is saved
+### 4. Deploy Application
+
+```bash
+# Clone repository
+git clone <repository-url>
+cd React\ Football\ Picks
+
+# Install backend dependencies
+cd backend
+npm install --production
+
+# Install frontend dependencies
+cd ../football-picks-app
+npm install
+npm run build
+```
+
+### 5. Configure Backend
+
+Edit `backend/config/app.js`:
+```javascript
+database: {
+  user: 'footballusr',
+  host: 'localhost',
+  database: 'football',
+  password: 'your_secure_password',
+  port: 5432
+}
+```
+
+### 6. Configure Nginx
+
+Create `/etc/nginx/sites-available/football-picks`:
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    # Frontend
+    location / {
+        root /path/to/React\ Football\ Picks/football-picks-app/dist;
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Backend API
+    location /api {
+        proxy_pass http://localhost:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Static images
+    location /images {
+        root /path/to/React\ Football\ Picks/football-picks-app/dist;
+    }
+}
+```
+
+Enable the site:
+```bash
+sudo ln -s /etc/nginx/sites-available/football-picks /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+### 7. Start Services with PM2
+
+Create `ecosystem.config.js` in the project root:
+```javascript
+module.exports = {
+  apps: [{
+    name: 'football-picks-backend',
+    script: 'backend/server.js',
+    cwd: '/path/to/React Football Picks',
+    instances: 1,
+    exec_mode: 'fork',
+    env: {
+      NODE_ENV: 'production',
+      PORT: 3001
+    }
+  }]
+};
+```
+
+Start the application:
+```bash
+pm2 start ecosystem.config.js
+pm2 save
+pm2 startup
+```
+
+### 8. SSL Certificate (Optional but Recommended)
+
+```bash
+# Install Certbot
+sudo apt install certbot python3-certbot-nginx
+
+# Get SSL certificate
+sudo certbot --nginx -d your-domain.com
+
+# Auto-renewal
+sudo crontab -e
+# Add: 0 12 * * * /usr/bin/certbot renew --quiet
+```
+
+## Environment Variables
+
+Create a `.env` file in the backend directory:
+
+```env
+NODE_ENV=production
+PORT=3001
+DB_USER=footballusr
+DB_HOST=localhost
+DB_NAME=football
+DB_PASSWORD=your_secure_password
+DB_PORT=5432
+SESSION_SECRET=your_session_secret_key
+```
+
+## Admin Features
+
+The application includes an admin panel accessible to users with admin privileges:
+
+- **User Management**: View and manage all users
+- **Picks Management**: View and edit user picks
+- **Update Scripts**: Run database update scripts
+- **Tag Management**: Assign tags to users for filtering
+
+## API Endpoints
+
+### Authentication
+- `POST /api/login` - User login
+- `POST /api/logout` - User logout
+- `POST /api/create-account` - Create new account
+- `GET /api/check-session` - Check authentication status
+
+### Games & Picks
+- `GET /api/weeks` - Get available weeks
+- `GET /api/games/:weekId` - Get games for a week
+- `GET /api/picks/:weekId` - Get user picks for a week
+- `POST /api/picks/:weekId` - Submit picks for a week
+
+### Standings
+- `GET /api/overall-standings` - Get overall standings
+- `GET /api/weekly-standings/:weekId` - Get weekly standings
+- `GET /api/team-stats` - Get team statistics
+
+### Admin
+- `GET /api/admin/users` - Get all users
+- `GET /api/admin/picks-status/:weekId` - Get picks status
+- `POST /api/admin/run-script` - Run update scripts
 
 ## Troubleshooting
 
-### "Port already in use" error
-- Make sure no other applications are using ports 3001 or 5173
-- Or change the ports in the configuration files
+### Common Issues
 
-### "Cannot connect to backend" error
-- Make sure the backend server is running on port 3001
-- Check that both servers are running in separate command windows
+1. **Database Connection Error**:
+   - Check PostgreSQL is running: `sudo systemctl status postgresql`
+   - Verify database credentials in `backend/config/app.js`
+   - Ensure database exists and user has proper permissions
 
-### Database errors
-- Delete `database.sqlite` file and run the init/seed commands again
+2. **Frontend Not Loading**:
+   - Check if backend is running on port 3001
+   - Verify CORS settings in backend configuration
+   - Check browser console for errors
 
-## Development
+3. **Build Errors**:
+   - Clear node_modules and reinstall: `rm -rf node_modules && npm install`
+   - Check Node.js version compatibility
+   - Verify all dependencies are installed
 
-- Backend runs on `http://localhost:3001`
-- Frontend runs on `http://localhost:5173`
-- Database file: `backend/database.sqlite`
-- Team images are served from `/images/` folder
+4. **Permission Issues**:
+   - Ensure proper file permissions: `chmod -R 755 /path/to/app`
+   - Check PM2 process ownership: `pm2 logs`
 
-## Next Steps
+### Logs
 
-Once you have this working locally, you can:
-1. Modify the database schema as needed
-2. Add more features
-3. Deploy to a hosting service
-4. Migrate data from your existing PHP application
+- **PM2 Logs**: `pm2 logs football-picks-backend`
+- **Nginx Logs**: `sudo tail -f /var/log/nginx/error.log`
+- **PostgreSQL Logs**: `sudo tail -f /var/log/postgresql/postgresql-*.log`
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature-name`
+3. Commit changes: `git commit -m 'Add feature'`
+4. Push to branch: `git push origin feature-name`
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Support
+
+For support and questions, please contact the developer or create an issue in the repository.

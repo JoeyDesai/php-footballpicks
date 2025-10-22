@@ -4,7 +4,7 @@ import axios from 'axios';
 // Backend URL - use network IP when accessing from mobile
 const BASE_URL = window.location.hostname === 'localhost' 
   ? 'http://localhost:3001' 
-  : 'http://192.168.0.115:3001';
+  : 'http://192.168.1.171:3001';
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -71,7 +71,10 @@ export const statsAPI = {
     api.get('/api/team-stats'),
   
   getHomeStats: () => 
-    api.get('/api/home-stats')
+    api.get('/api/home-stats'),
+  
+  getWeeks: () => 
+    api.get('/api/weeks')
 };
 
 export const adminAPI = {

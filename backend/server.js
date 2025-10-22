@@ -3,32 +3,67 @@ const session = require('express-session');
 const cors = require('cors');
 const path = require('path');
 const pool = require('./config/database');
-const scriptConfig = require('./config/scripts');
+const config = require('./config/app');
+const { 
+  sanitizeString, 
+  sanitizeEmail, 
+  validateLoginCredentials, 
+  validateUserRegistration, 
+  validatePicksData,
+  rateLimit 
+} = require('./utils/security');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = config.server.port;
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://192.168.0.115:5173'],
-  credentials: true
+  origin: config.cors.origins,
+  credentials: config.cors.credentials
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Rate limiting
+app.use(rateLimit(100, 15 * 60 * 1000)); // 100 requests per 15 minutes
+
+// Security headers
+app.use((req, res, next) => {
+  // Prevent XSS attacks
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  
+  // Content Security Policy
+  res.setHeader('Content-Security-Policy', 
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+    "style-src 'self' 'unsafe-inline'; " +
+    "img-src 'self' data:; " +
+    "font-src 'self'; " +
+    "connect-src 'self'; " +
+    "frame-ancestors 'none';"
+  );
+  
+  // Prevent MIME type sniffing
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  
+  // Referrer Policy
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  next();
+});
 
 app.use(session({
-  secret: 'football-picks-secret-key',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: false, // Set to true in production with HTTPS
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
+  secret: config.session.secret,
+  resave: config.session.resave,
+  saveUninitialized: config.session.saveUninitialized,
+  cookie: config.session.cookie
 }));
 
 // Serve static files (team images)
-app.use('/images', express.static(path.join(__dirname, '../images')));
+app.use(config.static.servePath, express.static(path.join(__dirname, config.static.imagesPath)));
 
 // Auth middleware
 const requireAuth = (req, res, next) => {
@@ -105,13 +140,17 @@ app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
     const currentYear = new Date().getFullYear();
     
-    if (!email || !password) {
-      return res.json({ success: false, error: 'Email and password required' });
+    // Validate and sanitize input
+    const validation = validateLoginCredentials(email, password);
+    if (!validation.valid) {
+      return res.json({ success: false, error: validation.error });
     }
+
+    const { email: sanitizedEmail, password: sanitizedPassword } = validation.data;
 
     const result = await pool.query(
       'SELECT * FROM pickers WHERE email = $1 AND year = $2',
-      [email, currentYear]
+      [sanitizedEmail, currentYear]
     );
     
     if (result.rows.length === 0) {
@@ -120,7 +159,7 @@ app.post('/api/login', async (req, res) => {
 
     const user = result.rows[0];
     // Use plain text password comparison
-    const validPassword = password === user.password;
+    const validPassword = sanitizedPassword === user.password;
     
     if (!validPassword) {
       return res.json({ success: false, error: 'Invalid email or password' });
@@ -157,20 +196,24 @@ app.post('/api/create-account', async (req, res) => {
   try {
     const { email, realName, nickName, password, sitePassword } = req.body;
     
-    // Simple site password check
-    if (sitePassword !== 'cowboys') {
-      return res.json({ success: false, error: 'Invalid site password' });
+    // Validate and sanitize input
+    const validation = validateUserRegistration({ email, realName, nickName, password, sitePassword });
+    if (!validation.valid) {
+      return res.json({ success: false, error: validation.error });
     }
 
-    if (!email || !realName || !nickName || !password) {
-      return res.json({ success: false, error: 'All fields are required' });
+    const { email: sanitizedEmail, realName: sanitizedRealName, nickName: sanitizedNickName, password: sanitizedPassword, sitePassword: sanitizedSitePassword } = validation.data;
+    
+    // Simple site password check
+    if (sanitizedSitePassword !== 'cowboys') {
+      return res.json({ success: false, error: 'Invalid site password' });
     }
 
     // Check if email already exists for current year
     const currentYear = new Date().getFullYear();
     const existingUser = await pool.query(
       'SELECT id FROM pickers WHERE email = $1 AND year = $2',
-      [email, currentYear]
+      [sanitizedEmail, currentYear]
     );
     
     if (existingUser.rows.length > 0) {
@@ -179,7 +222,7 @@ app.post('/api/create-account', async (req, res) => {
 
     await pool.query(
       'INSERT INTO pickers (email, password, nickname, realname, year) VALUES ($1, $2, $3, $4, $5)',
-      [email, password, nickName, realName, currentYear]
+      [sanitizedEmail, sanitizedPassword, sanitizedNickName, sanitizedRealName, currentYear]
     );
     
     res.json({ success: true, message: 'Account created successfully' });
@@ -289,10 +332,16 @@ app.post('/api/picks/:weekId', requireAuth, async (req, res) => {
     const userId = req.session.userId;
     const picks = req.body;
     
+    // Validate weekId parameter
+    const sanitizedWeekId = parseInt(weekId, 10);
+    if (isNaN(sanitizedWeekId) || sanitizedWeekId <= 0) {
+      return res.json({ success: false, error: 'Invalid week ID' });
+    }
+    
     // Check if week has started
     const weekResult = await pool.query(
       'SELECT startdate < NOW() as started FROM weeks WHERE id = $1',
-      [weekId]
+      [sanitizedWeekId]
     );
     
     if (weekResult.rows.length > 0 && weekResult.rows[0].started) {
@@ -300,39 +349,21 @@ app.post('/api/picks/:weekId', requireAuth, async (req, res) => {
     }
     
     // Get games for this week
-    const gamesResult = await pool.query('SELECT id FROM games WHERE week = $1', [weekId]);
+    const gamesResult = await pool.query('SELECT id FROM games WHERE week = $1', [sanitizedWeekId]);
     
-    // Validate picks
+    // Validate picks using security utility
     const gameIds = gamesResult.rows.map(g => g.id);
-    const usedValues = new Set();
-    const errors = [];
+    const validation = validatePicksData(picks, gameIds);
     
-    gameIds.forEach(gameId => {
-      const pick = picks[`GAME${gameId}`];
-      const value = picks[`VAL${gameId}`];
-      
-      if (!pick) {
-        errors.push(`Missing pick for game ${gameId}`);
-      }
-      
-      if (!value || value === 0) {
-        errors.push(`Missing value for game ${gameId}`);
-      } else if (usedValues.has(value)) {
-        errors.push(`Value ${value} used multiple times`);
-      } else {
-        usedValues.add(value);
-      }
-    });
-    
-    if (errors.length > 0) {
-      return res.json({ success: false, error: errors.join('. ') });
+    if (!validation.valid) {
+      return res.json({ success: false, error: validation.error });
     }
     
     // Delete existing picks for this week
     await pool.query(`
       DELETE FROM picks 
       WHERE picker = $1 AND game IN (SELECT id FROM games WHERE week = $2)
-    `, [userId, weekId]);
+    `, [userId, sanitizedWeekId]);
     
     // Insert new picks
     for (const gameId of gameIds) {
@@ -947,19 +978,22 @@ app.post('/api/admin/run-script', requireAuth, requireAdmin, async (req, res) =>
     const { exec } = require('child_process');
     
     // Get script path from config
-    const scriptPath = scriptConfig.getScriptPath(scriptType);
+    const scriptPath = config.getScriptPath(scriptType);
     console.log('Script path:', scriptPath);
     
     // Check if file exists
     const fs = require('fs');
-    if (!fs.existsSync(scriptPath)) {
-      console.error('Script file does not exist:', scriptPath);
-      return res.json({ success: false, error: `Script file not found: ${scriptPath}` });
+    const absoluteScriptPath = path.resolve(__dirname, scriptPath);
+    if (!fs.existsSync(absoluteScriptPath)) {
+      console.error('Script file does not exist:', absoluteScriptPath);
+      return res.json({ success: false, error: `Script file not found: ${absoluteScriptPath}` });
     }
     
     // Execute the PHP script (original files use $CurYear variable)
     // Quote the path to handle spaces in directory names
-    exec(`php "${scriptPath}"`, (error, stdout, stderr) => {
+    // Execute from DB Updates directory so relative paths work correctly
+    const dbUpdatesDir = path.join(__dirname, 'DB Updates');
+    exec(`php "${absoluteScriptPath}"`, { cwd: dbUpdatesDir }, (error, stdout, stderr) => {
       console.log('Script stdout:', stdout);
       console.log('Script stderr:', stderr);
       

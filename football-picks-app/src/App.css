@@ -682,7 +682,6 @@ body.iphone-pwa .header {
   .md\:flex { display: flex; }
   .md\:hidden { display: none; }
 }
-
 /* Admin Panel Styles */
 .admin-container {
   max-width: 1200px;

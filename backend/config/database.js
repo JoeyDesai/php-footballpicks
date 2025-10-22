@@ -1,13 +1,14 @@
 const { Pool } = require('pg');
+const config = require('./app');
 
-// Database configuration - easily changeable for deployment
+// Database configuration - uses centralized config
 const dbConfig = {
-  user: process.env.DB_USER || 'footballusr',
-  host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_NAME || 'football',
-  password: process.env.DB_PASSWORD || 'password', // Update this to your actual password
-  port: process.env.DB_PORT || 5432,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  user: config.database.user,
+  host: config.database.host,
+  database: config.database.database,
+  password: config.database.password,
+  port: config.database.port,
+  ssl: config.database.ssl
 };
 
 // Create connection pool

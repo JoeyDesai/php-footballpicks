@@ -1,8 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI } from '../services/api';
 
+// Create the authentication context for managing user state across the application
 const AuthContext = createContext();
 
+/**
+ * Custom hook to access the authentication context
+ * @returns {Object} The authentication context containing user state and auth methods
+ * @throws {Error} If used outside of an AuthProvider component
+ */
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
@@ -11,14 +17,27 @@ export function useAuth() {
   return context;
 }
 
+/**
+ * Authentication provider component that manages user authentication state
+ * @param {Object} props - Component props
+ * @param {React.ReactNode} props.children - Child components to wrap with auth context
+ * @returns {JSX.Element} AuthProvider component
+ */
 export function AuthProvider({ children }) {
+  // State for current authenticated user (null if not logged in)
   const [user, setUser] = useState(null);
+  // Loading state to prevent flash of unauthenticated content
   const [loading, setLoading] = useState(true);
 
+  // Check authentication status on component mount
   useEffect(() => {
     checkAuthStatus();
   }, []);
 
+  /**
+   * Checks if there's an active user session by calling the backend
+   * Sets user state if authenticated, otherwise keeps user as null
+   */
   const checkAuthStatus = async () => {
     try {
       const response = await authAPI.checkSession();
@@ -32,6 +51,12 @@ export function AuthProvider({ children }) {
     }
   };
 
+  /**
+   * Authenticates a user with email and password
+   * @param {string} email - User's email address
+   * @param {string} password - User's password
+   * @returns {Object} Result object with success boolean and optional error message
+   */
   const login = async (email, password) => {
     try {
       const response = await authAPI.login(email, password);
@@ -51,6 +76,10 @@ export function AuthProvider({ children }) {
     }
   };
 
+  /**
+   * Logs out the current user by clearing the session and user state
+   * Always clears user state even if backend logout fails
+   */
   const logout = async () => {
     try {
       await authAPI.logout();
@@ -61,6 +90,11 @@ export function AuthProvider({ children }) {
     }
   };
 
+  /**
+   * Creates a new user account
+   * @param {Object} userData - User registration data (email, password, etc.)
+   * @returns {Object} Result object with success boolean and optional error message
+   */
   const createAccount = async (userData) => {
     try {
       const response = await authAPI.createAccount(userData);
@@ -78,16 +112,17 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Check if user is admin
+  // Check if current user has admin privileges based on email
   const isAdmin = user && (user.email === 'jase@jasetheace.com' || user.email === 'joe');
 
+  // Context value object containing all authentication state and methods
   const value = {
-    user,
-    login,
-    logout,
-    createAccount,
-    loading,
-    isAdmin
+    user,           // Current authenticated user object (null if not logged in)
+    login,          // Function to authenticate user with email/password
+    logout,         // Function to log out current user
+    createAccount,  // Function to create new user account
+    loading,        // Boolean indicating if auth status is being checked
+    isAdmin         // Boolean indicating if current user has admin privileges
   };
 
   return (
