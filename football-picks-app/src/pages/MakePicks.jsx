@@ -7,6 +7,7 @@ import { sanitizeString, sanitizeFormData, getSafeDisplayName, sanitizeInteger }
 
 function MakePicks() {
   const { user } = useAuth();
+  // Main state for managing picks and games
   const [weeks, setWeeks] = useState([]);
   const [selectedWeek, setSelectedWeek] = useState(null);
   const [games, setGames] = useState([]);
@@ -19,6 +20,7 @@ function MakePicks() {
   const [viewMode, setViewMode] = useState('tiles'); // 'tiles', 'classic', 'dragdrop'
   const [autoPickHighest, setAutoPickHighest] = useState(true);
   const [validationErrors, setValidationErrors] = useState([]);
+  // Drag and drop state for reordering games
   const [draggedGameId, setDraggedGameId] = useState(null);
   const [dragOverGameId, setDragOverGameId] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
@@ -33,6 +35,7 @@ function MakePicks() {
 
   // Helper function to map team names to image file names
   const getTeamImageName = (teamName) => {
+    // Maps team names to their corresponding image files
     const teamMap = {
       '49ers': '49ers',
       'Bears': 'bears',
@@ -150,6 +153,7 @@ function MakePicks() {
   }, [headerScrollInterval]);
 
 
+  // Load available weeks and auto-select the next one to pick
   const loadWeeks = async () => {
     try {
       const response = await gameAPI.getWeeks();
@@ -209,6 +213,7 @@ function MakePicks() {
     }
   };
 
+  // Handle when user picks a team for a game
   const handlePickChange = (gameId, team) => {
     const newPicks = {
       ...picks,

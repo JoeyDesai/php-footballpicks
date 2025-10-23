@@ -6,6 +6,8 @@ import CustomDropdown from '../components/CustomDropdown';
 
 function Admin() {
   const { isAdmin } = useAuth();
+  
+  // Main state for different admin panels
   const [activePanel, setActivePanel] = useState('picks-status');
   const [weeks, setWeeks] = useState([]);
   const [selectedWeek, setSelectedWeek] = useState(null);
@@ -22,18 +24,12 @@ function Admin() {
   const [success, setSuccess] = useState('');
   const [autoPickHighest, setAutoPickHighest] = useState(true);
   
-  // Assign Tags state
+  // State for tag assignment feature
   const [allTags, setAllTags] = useState([]);
   const [userTags, setUserTags] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
 
-  // Update script paths - easily configurable for deployment
-  const updateScriptPaths = {
-    individualRecords: '/DB Updates/update_individualrecords.inc',
-    losers: '/DB Updates/update_losers.inc',
-    teamRecords: '/DB Updates/update_teamrecords.inc'
-  };
-
+  // Load initial data when admin access is confirmed
   useEffect(() => {
     if (!isAdmin) {
       return;
@@ -43,18 +39,21 @@ function Admin() {
     loadAllTags();
   }, [isAdmin]);
 
+  // Load picks status when week changes
   useEffect(() => {
     if (selectedWeek && activePanel === 'picks-status') {
       loadPicksStatus();
     }
   }, [selectedWeek, activePanel]);
 
+  // Load user games when entering picks for a user
   useEffect(() => {
     if (selectedUser && selectedWeek && activePanel === 'enter-picks') {
       loadUserGames();
     }
   }, [selectedUser, selectedWeek, activePanel]);
 
+  // Load available weeks and auto-select current week
   const loadWeeks = async () => {
     try {
       const response = await gameAPI.getWeeks();
@@ -75,6 +74,7 @@ function Admin() {
     }
   };
 
+  // Load all users and sort them alphabetically
   const loadUsers = async () => {
     try {
       const response = await adminAPI.getUsers();
@@ -92,6 +92,7 @@ function Admin() {
     }
   };
 
+  // Load all available tags for assignment
   const loadAllTags = async () => {
     try {
       const response = await adminAPI.getAllTags();
@@ -102,6 +103,7 @@ function Admin() {
     }
   };
 
+  // Load tags assigned to a specific user
   const loadUserTags = async (userId) => {
     try {
       const response = await adminAPI.getUserTags(userId);
@@ -114,6 +116,7 @@ function Admin() {
     }
   };
 
+  // Load picks status for all users in selected week
   const loadPicksStatus = async () => {
     if (!selectedWeek) return;
     
@@ -129,6 +132,7 @@ function Admin() {
     }
   };
 
+  // Load games and existing picks for a specific user
   const loadUserGames = async () => {
     if (!selectedUser || !selectedWeek) return;
     
@@ -155,6 +159,7 @@ function Admin() {
     }
   };
 
+  // Handle user search and filtering
   const handleUserSearch = (searchTerm) => {
     setUserSearch(searchTerm);
     setShowUserDropdown(true);
@@ -178,6 +183,7 @@ function Admin() {
     setFilteredUsers(filtered);
   };
 
+  // Handle user selection from dropdown
   const handleUserSelect = (user) => {
     setSelectedUser(user);
     setUserSearch(user.nickname || user.realname || user.email || '');
@@ -189,15 +195,18 @@ function Admin() {
     }
   };
 
+  // Show dropdown when search input is focused
   const handleUserSearchFocus = () => {
     setShowUserDropdown(true);
   };
 
+  // Hide dropdown with delay to allow click events
   const handleUserSearchBlur = () => {
     // Delay hiding dropdown to allow for click events
     setTimeout(() => setShowUserDropdown(false), 200);
   };
 
+  // Handle team pick selection with auto-point assignment
   const handlePickChange = (gameId, team) => {
     const newPicks = {
       ...userPicks,
@@ -231,6 +240,7 @@ function Admin() {
     setUserPicks(newPicks);
   };
 
+  // Handle point value changes for picks
   const handleValueChange = (gameId, value) => {
     setUserPicks(prev => ({
       ...prev,
@@ -238,10 +248,12 @@ function Admin() {
     }));
   };
 
+  // Toggle auto-pick highest points feature
   const handleAutoPickToggle = () => {
     setAutoPickHighest(!autoPickHighest);
   };
 
+  // Save user picks to database
   const saveUserPicks = async () => {
     if (!selectedUser || !selectedWeek) return;
     
@@ -257,6 +269,7 @@ function Admin() {
     }
   };
 
+  // Run individual update script
   const runUpdateScript = async (scriptType) => {
     setLoading(true);
     try {
@@ -270,6 +283,7 @@ function Admin() {
     }
   };
 
+  // Run all update scripts in sequence
   const runAllUpdateScripts = async () => {
     setLoading(true);
     try {
@@ -301,6 +315,7 @@ function Admin() {
     }
   };
 
+  // Toggle tag selection for user
   const handleTagToggle = (tagId) => {
     setSelectedTags(prev => {
       if (prev.includes(tagId)) {
@@ -311,6 +326,7 @@ function Admin() {
     });
   };
 
+  // Save user tag assignments
   const saveUserTags = async () => {
     if (!selectedUser) return;
     
@@ -328,6 +344,7 @@ function Admin() {
     }
   };
 
+  // Render picks status panel
   const renderPicksStatus = () => (
     <div className="admin-panel">
       <div className="admin-panel-header">
@@ -372,6 +389,7 @@ function Admin() {
     </div>
   );
 
+  // Render enter picks panel
   const renderEnterPicks = () => (
     <div className="admin-panel">
       <div className="admin-panel-header">
@@ -588,6 +606,7 @@ function Admin() {
     </div>
   );
 
+  // Render update scripts panel
   const renderUpdateScripts = () => (
     <div className="admin-panel">
       <div className="admin-panel-header">
@@ -619,6 +638,7 @@ function Admin() {
     </div>
   );
 
+  // Render assign tags panel
   const renderAssignTags = () => (
     <div className="admin-panel">
       <div className="admin-panel-header">
@@ -727,6 +747,7 @@ function Admin() {
     </div>
   );
 
+  // Check admin access
   if (!isAdmin) {
     return (
       <div className="admin-container">
@@ -738,6 +759,7 @@ function Admin() {
     );
   }
 
+  // Main admin panel layout
   return (
     <div className="admin-container">
       <div className="admin-navigation glass-container">
@@ -798,6 +820,7 @@ function Admin() {
       </div>
 
       <div className="admin-content glass-container">
+        {/* Display error and success messages */}
         {error && (
           <div className="error-message">
             {error}
@@ -810,6 +833,7 @@ function Admin() {
           </div>
         )}
 
+        {/* Render active panel based on selection */}
         {activePanel === 'picks-status' && renderPicksStatus()}
         {activePanel === 'enter-picks' && renderEnterPicks()}
         {activePanel === 'update-scripts' && renderUpdateScripts()}

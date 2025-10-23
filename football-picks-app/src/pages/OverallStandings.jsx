@@ -15,6 +15,7 @@ const formatNumber = (num) => {
 
 function OverallStandings() {
   const { user } = useAuth();
+  // Main state for standings data and UI controls
   const [standings, setStandings] = useState([]);
   const [detailedData, setDetailedData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -81,6 +82,7 @@ function OverallStandings() {
     }
   };
 
+  // Load standings data based on current view mode
   const loadStandings = async () => {
     try {
       setLoading(true);

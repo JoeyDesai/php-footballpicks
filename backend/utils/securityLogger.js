@@ -12,8 +12,6 @@ const logSuspiciousActivity = (req, activity, details = {}) => {
   };
   
   console.warn('SECURITY ALERT:', logData);
-  
-  // TODO: Send to external security service (e.g., Sentry, LogRocket, etc.)
 };
 
 const logAdminAction = (req, action, details = {}) => {

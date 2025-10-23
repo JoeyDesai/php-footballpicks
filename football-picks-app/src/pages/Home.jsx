@@ -7,6 +7,8 @@ import { sanitizeString, sanitizeUserData, getSafeDisplayName } from '../utils/s
 
 function Home() {
   const { user } = useAuth();
+  
+  // State for standings and week data
   const [weeklyStandings, setWeeklyStandings] = useState([]);
   const [overallStandings, setOverallStandings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -16,11 +18,12 @@ function Home() {
   const [showHowToPlay, setShowHowToPlay] = useState(false);
   const [showInstallApp, setShowInstallApp] = useState(false);
 
+  // Load initial data on component mount
   useEffect(() => {
     loadHomeData();
   }, []);
 
-  // Simple countdown to next Thursday (typical NFL game day)
+  // Countdown timer to next Thursday
   useEffect(() => {
     const updateCountdown = () => {
       const now = new Date();
@@ -85,13 +88,14 @@ function Home() {
     }
   }, []);
 
-  // Helper function to format decimal numbers
+  // Format numbers for display (remove decimals if whole number)
   const formatNumber = (num) => {
     if (num === null || num === undefined) return '0';
     const numValue = parseFloat(num);
     return numValue % 1 === 0 ? numValue.toString() : numValue.toFixed(1);
   };
 
+  // Load all home page data
   const loadHomeData = async () => {
     try {
       setLoading(true);
@@ -145,6 +149,7 @@ function Home() {
     }
   };
 
+  // Show loading spinner while data loads
   if (loading) {
     return (
       <div className="home-container">
@@ -153,6 +158,7 @@ function Home() {
     );
   }
 
+  // Main home page layout
   return (
     <div className="home-container">
       <div className="welcome-section glass-container">
@@ -167,7 +173,7 @@ function Home() {
       </div>
 
       <div className="stats-grid">
-        {/* Weekly Standings Preview */}
+        {/* Weekly standings preview */}
         <div className="stats-card glass-container">
           <div className="stats-header">
             <Calendar className="stats-icon" />
@@ -212,7 +218,7 @@ function Home() {
           )}
         </div>
 
-        {/* Overall Standings Preview */}
+        {/* Overall standings preview */}
         <div className="stats-card glass-container">
           <div className="stats-header">
             <Trophy className="stats-icon" />
@@ -258,6 +264,7 @@ function Home() {
         </div>
       </div>
 
+      {/* Quick action buttons */}
       <div className="quick-actions glass-container">
         <h2>Quick Actions</h2>
         <div className="action-buttons">
@@ -286,7 +293,7 @@ function Home() {
         </div>
       </div>
 
-      {/* How to Play Popup */}
+      {/* How to play popup modal */}
       {showHowToPlay && (
         <div className="popup-overlay" onClick={() => setShowHowToPlay(false)}>
           <div className="popup-content glass-container" onClick={(e) => e.stopPropagation()}>
@@ -348,7 +355,7 @@ function Home() {
         </div>
       )}
 
-      {/* Install App Popup */}
+      {/* Install app popup modal */}
       {showInstallApp && (
         <div className="popup-overlay" onClick={() => setShowInstallApp(false)}>
           <div className="popup-content glass-container" onClick={(e) => e.stopPropagation()}>

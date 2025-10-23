@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI } from '../services/api';
 import { sanitizeUserData } from '../utils/sanitize';
+import { isAdminUser, getNetworkErrorMessage, config } from '../config';
 
 // Create the authentication context for managing user state across the application
 const AuthContext = createContext();
@@ -66,14 +67,14 @@ export function AuthProvider({ children }) {
         setUser(sanitizeUserData(response.data.user));
         return { success: true };
       } else {
-        return { success: false, error: response.data?.error || 'Invalid email or password' };
+        return { success: false, error: response.data?.error || config.errors.invalidCredentials };
       }
     } catch (error) {
       console.error('Login error:', error);
       if (error.response && error.response.data && error.response.data.error) {
         return { success: false, error: error.response.data.error };
       }
-      return { success: false, error: 'Network error - make sure the backend server is running on port 3001' };
+      return { success: false, error: getNetworkErrorMessage() };
     }
   };
 
@@ -102,19 +103,19 @@ export function AuthProvider({ children }) {
       if (response.data && response.data.success) {
         return { success: true };
       } else {
-        return { success: false, error: response.data?.error || 'Account creation failed' };
+        return { success: false, error: response.data?.error || config.errors.accountCreationFailed };
       }
     } catch (error) {
       console.error('Create account error:', error);
       if (error.response && error.response.data && error.response.data.error) {
         return { success: false, error: error.response.data.error };
       }
-      return { success: false, error: 'Network error - make sure the backend server is running on port 3001' };
+      return { success: false, error: getNetworkErrorMessage() };
     }
   };
 
   // Check if current user has admin privileges based on email
-  const isAdmin = user && (user.email === 'jase@jasetheace.com' || user.email === 'joe');
+  const isAdmin = user && isAdminUser(user.email);
 
   // Context value object containing all authentication state and methods
   const value = {

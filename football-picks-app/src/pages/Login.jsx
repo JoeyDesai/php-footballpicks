@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { sanitizeString, sanitizeFormData } from '../utils/sanitize';
 
 function Login() {
+  // Basic form state for email and password
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -42,6 +43,7 @@ function Login() {
     }
   }, []);
 
+  // Handle input changes and clean the data
   const handleChange = (e) => {
     const sanitizedValue = sanitizeString(e.target.value);
     setFormData({
@@ -51,6 +53,7 @@ function Login() {
     setError('');
   };
 
+  // Submit the login form and handle the response
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -75,6 +78,7 @@ function Login() {
           <p>Sign in to your account</p>
         </div>
 
+        {/* Show error message if login fails */}
         {error && (
           <div className="error-message">
             <AlertCircle size={20} />
@@ -82,6 +86,7 @@ function Login() {
           </div>
         )}
 
+        {/* Main login form with username and password fields */}
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
             <label htmlFor="email">Username</label>
@@ -117,6 +122,7 @@ function Login() {
             </div>
           </div>
 
+          {/* Submit button that shows loading state */}
           <button
             type="submit"
             className="glass-button primary w-full"
@@ -126,6 +132,7 @@ function Login() {
           </button>
         </form>
 
+        {/* Link to create account page */}
         <div className="login-footer">
           <p>Don't have an account?</p>
           <Link to="/create-account" className="glass-button secondary">

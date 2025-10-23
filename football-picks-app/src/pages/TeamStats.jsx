@@ -6,6 +6,7 @@ import { sanitizeString } from '../utils/sanitize';
 
 function TeamStats() {
   const { user } = useAuth();
+  // State for team statistics and sorting
   const [teamStats, setTeamStats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -29,6 +30,7 @@ function TeamStats() {
 
   // Helper function to map team names to image file names
   const getTeamImageName = (teamName) => {
+    // Maps team names to their corresponding image files
     const teamMap = {
       '49ers': '49ers',
       'Bears': 'bears',
@@ -70,6 +72,7 @@ function TeamStats() {
     loadTeamStats();
   }, []);
 
+  // Load team statistics from the API
   const loadTeamStats = async () => {
     try {
       setLoading(true);
@@ -92,6 +95,7 @@ function TeamStats() {
     }
   };
 
+  // Handle sorting when user clicks column headers
   const handleSort = (column) => {
     if (sortBy === column) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');

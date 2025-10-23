@@ -14,6 +14,7 @@ const formatNumber = (num) => {
 
 function WeeklyStandings() {
   const { user } = useAuth();
+  // Main state for weekly standings and UI controls
   const [weeks, setWeeks] = useState([]);
   const [selectedWeek, setSelectedWeek] = useState(null);
   const [standings, setStandings] = useState([]);
@@ -109,6 +110,7 @@ function WeeklyStandings() {
     }
   };
 
+  // Load available weeks and auto-select the most recent completed one
   const loadWeeks = async () => {
     try {
       const response = await gameAPI.getWeeks();
@@ -124,6 +126,7 @@ function WeeklyStandings() {
     }
   };
 
+  // Load standings data based on selected week and view mode
   const loadStandings = async () => {
     try {
       setLoading(true);
@@ -198,6 +201,7 @@ function WeeklyStandings() {
     });
   };
 
+  // Toggle auto refresh feature for live updates
   const toggleAutoRefresh = () => {
     const newAutoRefresh = !autoRefresh;
     setAutoRefresh(newAutoRefresh);

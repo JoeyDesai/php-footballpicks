@@ -1,10 +1,9 @@
 // API service for Football Picks app
 import axios from 'axios';
+import { getBackendUrl, config } from '../config';
 
 // Backend URL - use network IP when accessing from mobile
-const BASE_URL = window.location.hostname === 'localhost' 
-  ? 'http://localhost:3001' 
-  : 'http://192.168.1.171:3001';
+const BASE_URL = getBackendUrl();
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -16,13 +15,13 @@ const api = axios.create({
 
 export const authAPI = {
   login: (email, password) => 
-    api.post('/api/login', { email, password }),
+    api.post(config.api.auth.login, { email, password }),
   
   logout: () => 
-    api.post('/api/logout'),
+    api.post(config.api.auth.logout),
   
   createAccount: (userData) => 
-    api.post('/api/create-account', {
+    api.post(config.api.auth.createAccount, {
       email: userData.email,
       realName: userData.realName,
       nickName: userData.nickName,
@@ -31,76 +30,76 @@ export const authAPI = {
     }),
   
   checkSession: () => 
-    api.get('/api/check-session'),
+    api.get(config.api.auth.checkSession),
   
   getUserTags: () => 
-    api.get('/api/user-tags')
+    api.get(config.api.auth.getUserTags)
 };
 
 export const gameAPI = {
   getWeeks: () => 
-    api.get('/api/weeks'),
+    api.get(config.api.game.getWeeks),
   
   getGames: (weekId) => 
-    api.get(`/api/games/${weekId}`),
+    api.get(config.api.game.getGames(weekId)),
   
   getPicks: (weekId) => 
-    api.get(`/api/picks/${weekId}`),
+    api.get(config.api.game.getPicks(weekId)),
   
   submitPicks: (weekId, picks) => 
-    api.post(`/api/picks/${weekId}`, picks)
+    api.post(config.api.game.submitPicks(weekId), picks)
 };
 
 export const statsAPI = {
   getWeeklyStandings: (weekId, tag = 0) => 
-    api.get(`/api/weekly-standings/${weekId}?tag=${tag}`),
+    api.get(config.api.stats.getWeeklyStandings(weekId, tag)),
   
   getWeeklyStandingsDetailed: (weekId, tag = 0) => 
-    api.get(`/api/weekly-standings-detailed/${weekId}?tag=${tag}`),
+    api.get(config.api.stats.getWeeklyStandingsDetailed(weekId, tag)),
   
   getWeeklyStandingsClassic: (weekId, tag = 0) => 
-    api.get(`/api/weekly-standings-classic/${weekId}?tag=${tag}`),
+    api.get(config.api.stats.getWeeklyStandingsClassic(weekId, tag)),
   
   getOverallStandings: (tag = 0) => 
-    api.get(`/api/overall-standings?tag=${tag}`),
+    api.get(config.api.stats.getOverallStandings(tag)),
   
   getOverallStandingsDetailed: (tag = 0) => 
-    api.get(`/api/overall-standings-detailed?tag=${tag}`),
+    api.get(config.api.stats.getOverallStandingsDetailed(tag)),
   
   getTeamStats: () => 
-    api.get('/api/team-stats'),
+    api.get(config.api.stats.getTeamStats),
   
   getHomeStats: () => 
-    api.get('/api/home-stats'),
+    api.get(config.api.stats.getHomeStats),
   
   getWeeks: () => 
-    api.get('/api/weeks')
+    api.get(config.api.stats.getWeeks)
 };
 
 export const adminAPI = {
   getUsers: () => 
-    api.get('/api/admin/users'),
+    api.get(config.api.admin.getUsers),
   
   getPicksStatus: (weekId) => 
-    api.get(`/api/admin/picks-status/${weekId}`),
+    api.get(config.api.admin.getPicksStatus(weekId)),
   
   getUserPicks: (userId, weekId) => 
-    api.get(`/api/admin/user-picks/${userId}/${weekId}`),
+    api.get(config.api.admin.getUserPicks(userId, weekId)),
   
   submitUserPicks: (userId, weekId, picks) => 
-    api.post(`/api/admin/user-picks/${userId}/${weekId}`, picks),
+    api.post(config.api.admin.submitUserPicks(userId, weekId), picks),
   
   runScript: (scriptType) => 
-    api.post('/api/admin/run-script', { scriptType }),
+    api.post(config.api.admin.runScript, { scriptType }),
   
   getAllTags: () => 
-    api.get('/api/admin/tags'),
+    api.get(config.api.admin.getAllTags),
   
   getUserTags: (userId) => 
-    api.get(`/api/admin/user-tags/${userId}`),
+    api.get(config.api.admin.getUserTags(userId)),
   
   updateUserTags: (userId, tagIds) => 
-    api.post(`/api/admin/user-tags/${userId}`, { tagIds })
+    api.post(config.api.admin.updateUserTags(userId), { tagIds })
 };
 
 export default api;

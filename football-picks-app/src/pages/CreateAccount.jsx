@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { sanitizeString, sanitizeFormData } from '../utils/sanitize';
 
 function CreateAccount() {
+  // Form data state for account creation
   const [formData, setFormData] = useState({
     email: '',
     realName: '',
@@ -19,6 +20,7 @@ function CreateAccount() {
   const { createAccount } = useAuth();
   const navigate = useNavigate();
 
+  // Handle form input changes with sanitization
   const handleChange = (e) => {
     const sanitizedValue = sanitizeString(e.target.value);
     setFormData({
@@ -29,6 +31,7 @@ function CreateAccount() {
     setSuccess('');
   };
 
+  // Handle form submission with validation
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -65,6 +68,7 @@ function CreateAccount() {
     setLoading(false);
   };
 
+  // Main account creation form
   return (
     <div className="create-account-container">
       <div className="create-account-card glass-container">
@@ -74,6 +78,7 @@ function CreateAccount() {
           <p>Join the Football Picks community</p>
         </div>
 
+        {/* Display error and success messages */}
         {error && (
           <div className="error-message">
             <AlertCircle size={20} />
@@ -88,6 +93,7 @@ function CreateAccount() {
           </div>
         )}
 
+        {/* Account creation form */}
         <form onSubmit={handleSubmit} className="create-account-form">
           <div className="form-group">
             <label htmlFor="email">Email Address</label>
@@ -203,6 +209,7 @@ function CreateAccount() {
           </button>
         </form>
 
+        {/* Footer with login link */}
         <div className="create-account-footer">
           <p>Already have an account?</p>
           <Link to="/login" className="glass-button secondary">
