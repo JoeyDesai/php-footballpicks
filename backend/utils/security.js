@@ -12,6 +12,7 @@ const sanitizeString = (input) => {
     return String(input || '');
   }
 
+
   return input
     // Remove null bytes and control characters
     .replace(/\0/g, '')
