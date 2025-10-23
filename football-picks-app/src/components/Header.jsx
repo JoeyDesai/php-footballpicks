@@ -125,8 +125,8 @@ function Header() {
 
         @media (min-width: 768px) {
           .header-logo {
-            width: 80px;
-            height: 80px;
+            width: 64px;
+            height: 64px;
           }
         }
 
