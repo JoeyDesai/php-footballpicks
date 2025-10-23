@@ -29,4 +29,3 @@ if (!isset($NoHeader)) {
 if (!isset($NoLogin) and !isset($NoWeeksNav)) {
   include 'weeksnav.inc';
 }
-?>
