@@ -318,7 +318,7 @@ function TeamStats() {
           </div>
 
           <div className="insight-card glass-container">
-            <h3>Most Dependable</h3>
+            <h3>Most Dependable (When Picked)</h3>
             <div className="insight-content">
               {(() => {
                 const filteredTeams = teamStats.filter(team => {

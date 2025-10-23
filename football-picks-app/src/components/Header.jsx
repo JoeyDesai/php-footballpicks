@@ -123,6 +123,13 @@ function Header() {
           margin-right: 0.75rem;
         }
 
+        @media (min-width: 768px) {
+          .header-logo {
+            width: 80px;
+            height: 80px;
+          }
+        }
+
         .desktop-nav {
           display: none;
           align-items: center;

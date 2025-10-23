@@ -1,22 +1,22 @@
 // Centralized configuration for Football Picks App
-// Modify these values to change all settings across the application
+// All settings are hardcoded for simplicity - modify these values directly
 
 const config = {
   // Server Configuration
   server: {
-    port: process.env.PORT || 3001,
-    host: process.env.HOST || 'localhost',
-    environment: process.env.NODE_ENV || 'development'
+    port: 3001,
+    host: 'localhost',
+    environment: 'development'
   },
 
   // Database Configuration (PostgreSQL)
   database: {
-    user: process.env.DB_USER || 'footballusr',
-    host: process.env.DB_HOST || 'localhost',
-    database: process.env.DB_NAME || 'football',
-    password: process.env.DB_PASSWORD || 'password',
-    port: process.env.DB_PORT || 5432,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    user: 'footballusr',
+    host: 'localhost',
+    database: 'football',
+    password: 'password',
+    port: 5432,
+    ssl: false // Set to { rejectUnauthorized: false } for production
   },
 
   // CORS Configuration
@@ -32,11 +32,11 @@ const config = {
 
   // Session Configuration
   session: {
-    secret: process.env.SESSION_SECRET || 'football-picks-secret-key',
+    secret: 'football-picks-secret-key',
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === 'production', // Set to true in production with HTTPS
+      secure: false, // Set to true in production with HTTPS
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
   },
@@ -60,17 +60,17 @@ const config = {
 
   // PHP Database Configuration (for DB update scripts)
   phpDatabase: {
-    user: process.env.DB_USER || 'footballusr',
-    password: process.env.DB_PASSWORD || 'password',
-    database: process.env.DB_NAME || 'football',
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 5432
+    user: 'footballusr',
+    password: 'password',
+    database: 'football',
+    host: 'localhost',
+    port: 5432
   },
 
   // Application Settings
   app: {
     currentYear: 2025,
-    debug: process.env.DEBUG === 'true' || false
+    debug: false
   }
 };
 

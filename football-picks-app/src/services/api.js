@@ -1,6 +1,7 @@
 // API service for Football Picks app
 import axios from 'axios';
-import { getBackendUrl, config } from '../config';
+import { getBackendUrl } from '../config';
+import config from '../config';
 
 // Backend URL - use network IP when accessing from mobile
 const BASE_URL = getBackendUrl();

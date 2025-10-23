@@ -23,30 +23,99 @@ function Home() {
     loadHomeData();
   }, []);
 
-  // Countdown timer to next Thursday
+  // Countdown timer to first game of next week
   useEffect(() => {
-    const updateCountdown = () => {
-      const now = new Date();
-      const nextThursday = new Date();
-      
-      // Find next Thursday
-      const daysUntilThursday = (4 - now.getDay() + 7) % 7; // Thursday is day 4
-      nextThursday.setDate(now.getDate() + (daysUntilThursday === 0 ? 7 : daysUntilThursday));
-      nextThursday.setHours(20, 0, 0, 0); // 8 PM Eastern (typical game time)
-      
-      const timeDiff = nextThursday.getTime() - now.getTime();
-      
-      console.log('Countdown update:', { now, nextThursday, timeDiff });
-      
-      if (timeDiff > 0) {
-        const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+    const updateCountdown = async () => {
+      try {
+        // Get the next week's games to find the first game time
+        if (nextWeek) {
+          const gamesResponse = await gameAPI.getGames(nextWeek.id);
+          
+          if (gamesResponse.data.success && gamesResponse.data.games.length > 0) {
+            // Find the earliest game time
+            const games = gamesResponse.data.games;
+            const now = new Date();
+            let earliestGameTime = null;
+            
+            // Find the first game that hasn't started yet
+            for (const game of games) {
+              if (game.date) {
+                const gameTime = new Date(game.date);
+                if (gameTime > now && (!earliestGameTime || gameTime < earliestGameTime)) {
+                  earliestGameTime = gameTime;
+                }
+              }
+            }
+            
+            if (earliestGameTime) {
+              const timeDiff = earliestGameTime.getTime() - now.getTime();
+              
+              console.log('Countdown update:', { now, earliestGameTime, timeDiff });
+              
+              if (timeDiff > 0) {
+                const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+                
+                console.log('Setting countdown:', { days, hours, minutes });
+                setCountdown({ days, hours, minutes });
+              } else {
+                setCountdown({ days: 0, hours: 0, minutes: 0 });
+              }
+            } else {
+              // No upcoming games found, fallback to next Thursday at 8pm
+              const nextThursday = new Date();
+              const daysUntilThursday = (4 - now.getDay() + 7) % 7;
+              nextThursday.setDate(now.getDate() + (daysUntilThursday === 0 ? 7 : daysUntilThursday));
+              nextThursday.setHours(20, 0, 0, 0);
+              
+              const timeDiff = nextThursday.getTime() - now.getTime();
+              if (timeDiff > 0) {
+                const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+                setCountdown({ days, hours, minutes });
+              } else {
+                setCountdown({ days: 0, hours: 0, minutes: 0 });
+              }
+            }
+          } else {
+            // No games available, fallback to next Thursday at 8pm
+            const now = new Date();
+            const nextThursday = new Date();
+            const daysUntilThursday = (4 - now.getDay() + 7) % 7;
+            nextThursday.setDate(now.getDate() + (daysUntilThursday === 0 ? 7 : daysUntilThursday));
+            nextThursday.setHours(20, 0, 0, 0);
+            
+            const timeDiff = nextThursday.getTime() - now.getTime();
+            if (timeDiff > 0) {
+              const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+              const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+              const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+              setCountdown({ days, hours, minutes });
+            } else {
+              setCountdown({ days: 0, hours: 0, minutes: 0 });
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error updating countdown:', error);
+        // Fallback to next Thursday at 8pm on error
+        const now = new Date();
+        const nextThursday = new Date();
+        const daysUntilThursday = (4 - now.getDay() + 7) % 7;
+        nextThursday.setDate(now.getDate() + (daysUntilThursday === 0 ? 7 : daysUntilThursday));
+        nextThursday.setHours(20, 0, 0, 0);
         
-        console.log('Setting countdown:', { days, hours, minutes });
-        setCountdown({ days, hours, minutes });
-      } else {
-        setCountdown({ days: 0, hours: 0, minutes: 0 });
+        const timeDiff = nextThursday.getTime() - now.getTime();
+        if (timeDiff > 0) {
+          const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+          setCountdown({ days, hours, minutes });
+        } else {
+          setCountdown({ days: 0, hours: 0, minutes: 0 });
+        }
       }
     };
 
@@ -57,7 +126,7 @@ function Home() {
     const interval = setInterval(updateCountdown, 60000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [nextWeek]); // Add nextWeek as dependency
 
   // Fix mobile scroll position on mount
   useEffect(() => {

@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI } from '../services/api';
 import { sanitizeUserData } from '../utils/sanitize';
-import { isAdminUser, getNetworkErrorMessage, config } from '../config';
+import { isAdminUser, getNetworkErrorMessage } from '../config';
+import config from '../config';
 
 // Create the authentication context for managing user state across the application
 const AuthContext = createContext();
