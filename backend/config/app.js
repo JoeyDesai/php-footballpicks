@@ -68,7 +68,7 @@ const config = {
     currentYear: 2026,
     debug: false,
     sitePassword: 'cowboys',
-    adminEmails: ['jase@jasetheace.com']
+    adminEmails: ['jase@jasetheace.com', 'joe']
   }
 };
 
