@@ -78,7 +78,7 @@ export const getBackendUrl = () => {
 
 // Helper function to check if user is admin
 export const isAdminUser = (userEmail) => {
-  return config.admin.adminEmails.includes(userEmail);
+  return config.admin.adminEmails.includes((userEmail || '').toLowerCase());
 };
 
 // Helper function to get network error message with port

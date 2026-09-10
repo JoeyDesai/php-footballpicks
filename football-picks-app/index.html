@@ -5,6 +5,12 @@
     <link rel="icon" type="image/png" href="/images/app_icon.png?v=2" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Football Picks</title>
+    <script>
+      // Backend CORS and secure cookies require HTTPS; redirect plain-http visits
+      if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost') {
+        window.location.replace(window.location.href.replace(/^http:/, 'https:'));
+      }
+    </script>
     
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="/manifest.json?v=2" />
